@@ -1,0 +1,2075 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Puck Jesus' Blessed Union - Auction Draft Board</title>
+    <style>
+        :root {
+            --bg-color: #08090c; /* Deep Rich Black */
+            --panel-bg: #10121a; /* Dark Luxury Slate */
+            --card-bg: #181b26; /* Deep Cool Grey */
+            --primary-color: #cca028; /* Burnished Athletic Gold */
+            --primary-hover: #e0b33c;
+            --text-color: #f1f3f5; /* Crisp Off-White */
+            --text-muted: #8e959f; /* Cool Grey */
+            --border-color: #262b3a; /* Subtle Charcoal Border */
+            --danger-color: #ef4444;
+            --success-color: #10b981;
+            --highlight-bg: rgba(204, 160, 40, 0.12);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* Views management */
+        .view-section {
+            display: none;
+            flex: 1;
+            flex-direction: column;
+            padding: 15px;
+        }
+
+        .view-section.active {
+            display: flex;
+        }
+
+        /* SETUP SCREEN STYLE */
+        .welcome-container {
+            max-width: 950px;
+            margin: 15px auto;
+            background: var(--panel-bg);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.8);
+            padding: 25px;
+            width: 100%;
+        }
+
+        .welcome-header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+        }
+
+        .welcome-header h1 {
+            color: var(--primary-color);
+            font-size: 2.4rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-weight: 900;
+            text-shadow: 0 2px 10px rgba(204, 160, 40, 0.2);
+        }
+
+        .welcome-header p {
+            font-size: 1rem;
+            color: var(--text-muted);
+            margin-top: 5px;
+        }
+
+        .setup-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .setup-row label {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .setup-row input {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            color: white;
+            padding: 6px 12px;
+            font-size: 1rem;
+            border-radius: 6px;
+            width: 100px;
+            text-align: center;
+            transition: border-color 0.2s;
+            font-weight: bold;
+        }
+
+        .setup-row input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .manager-list-container {
+            margin-bottom: 15px;
+        }
+
+        .manager-list-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .manager-list-header h3 {
+            color: var(--primary-color);
+            font-size: 1.15rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-small {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 5px 12px;
+            cursor: pointer;
+            border-radius: 6px;
+            font-weight: 600;
+            transition: all 0.2s;
+            font-size: 0.85rem;
+        }
+
+        .btn-small:hover {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+            background: rgba(204, 160, 40, 0.05);
+        }
+
+        /* ASSIGNMENTS LAYOUT */
+        .setup-assignment-wrapper {
+            display: flex;
+            gap: 20px;
+            margin-top: 5px;
+        }
+
+        .setup-col {
+            flex: 1;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            height: auto;
+        }
+
+        .setup-col h4 {
+            color: var(--primary-color);
+            margin-bottom: 12px;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 6px;
+        }
+
+        .pool-item {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 6px;
+            align-items: center;
+            background: var(--panel-bg);
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+
+        .pool-item.assigned {
+            opacity: 0.45;
+        }
+
+        .pool-item input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid var(--border-color);
+            color: white;
+            padding: 4px;
+            font-size: 0.95rem;
+            font-weight: 600;
+        }
+
+        .pool-item input:focus {
+            outline: none;
+            border-bottom-color: var(--primary-color);
+        }
+
+        .pool-item .btn-select {
+            background: transparent;
+            border: 1px solid var(--primary-color);
+            color: var(--primary-color);
+            padding: 3px 10px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-weight: 700;
+            transition: all 0.2s;
+            font-size: 0.8rem;
+        }
+
+        .pool-item .btn-select.active {
+            background: var(--primary-color);
+            color: #000;
+            box-shadow: 0 0 12px rgba(204, 160, 40, 0.4);
+        }
+
+        .spot-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--panel-bg);
+            border: 1px dashed var(--border-color);
+            padding: 6px 12px;
+            margin-bottom: 6px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+
+        .spot-item:hover {
+            border-style: solid;
+            border-color: var(--primary-color);
+            background: rgba(204, 160, 40, 0.02);
+        }
+
+        .spot-item.pulse {
+            animation: pulseHighlight 1.5s infinite;
+            border-style: solid;
+            border-color: var(--primary-color);
+            background: rgba(204, 160, 40, 0.05);
+        }
+
+        .spot-item.filled {
+            border-style: solid;
+            border-color: var(--primary-color);
+            background: rgba(204, 160, 40, 0.08);
+        }
+
+        .spot-num {
+            font-weight: 700;
+            color: var(--text-muted);
+            width: 65px;
+            flex-shrink: 0;
+            display: inline-block;
+        }
+        .spot-item.filled .spot-num {
+            color: var(--primary-color);
+        }
+
+        .spot-name {
+            flex: 1;
+            font-weight: 600;
+            color: white;
+        }
+
+        .btn-unassign {
+            background: transparent;
+            border: none;
+            color: var(--danger-color);
+            cursor: pointer;
+            font-size: 1.2rem;
+            font-weight: bold;
+            padding: 0 5px;
+            display: flex;
+            align-items: center;
+        }
+
+        @keyframes pulseHighlight {
+            0% { box-shadow: 0 0 4px rgba(204, 160, 40, 0.2); }
+            50% { box-shadow: 0 0 12px rgba(204, 160, 40, 0.5); }
+            100% { box-shadow: 0 0 4px rgba(204, 160, 40, 0.2); }
+        }
+
+        .start-btn-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: #000;
+            font-size: 1.1rem;
+            font-weight: 700;
+            padding: 10px 35px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(204, 160, 40, 0.3);
+            transition: transform 0.1s, box-shadow 0.2s, background-color 0.2s;
+            display: inline-block;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(204, 160, 40, 0.5);
+        }
+
+        .btn-primary:active {
+            transform: translateY(1px);
+        }
+
+        /* HIGH-CONTRAST ROSTER CONFIGURATION INPUTS */
+        .roster-setup-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 0.85rem;
+            background: var(--card-bg);
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+
+        .roster-setup-item label {
+            color: var(--text-color);
+            margin-bottom: 4px;
+            font-weight: 700;
+        }
+
+        .roster-setup-item input {
+            background: #000 !important;
+            color: var(--primary-color) !important;
+            border: 1px solid var(--primary-color) !important;
+            font-weight: bold;
+            text-align: center;
+            padding: 4px;
+            border-radius: 4px;
+            font-size: 1.1rem !important;
+            width: 50px !important;
+        }
+
+        /* ARCHIVES BOX */
+        .archives-box {
+            margin-top: 20px;
+            border-top: 1px solid var(--border-color);
+            padding-top: 15px;
+        }
+
+        .archives-box h3 {
+            color: var(--primary-color);
+            margin-bottom: 10px;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .archives-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 120px;
+            overflow-y: auto;
+        }
+
+        .archive-item {
+            background: var(--card-bg);
+            padding: 8px 12px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+            border: 1px solid var(--border-color);
+        }
+
+        .archive-item span {
+            font-weight: 700;
+        }
+
+        .archive-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        /* DRAFT BOARD STYLE */
+        header {
+            background-color: var(--panel-bg);
+            border-bottom: 2px solid var(--primary-color);
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+
+        .logo-section h1 {
+            color: var(--primary-color);
+            font-size: 1.6rem;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            font-weight: 800;
+        }
+
+        .logo-section p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 2px;
+        }
+
+        .draft-info {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .turn-box {
+            background: rgba(0,0,0,0.3);
+            padding: 6px 12px;
+            border-radius: 6px;
+            border-left: 3px solid var(--primary-color);
+            font-size: 0.9rem;
+        }
+
+        .turn-highlight {
+            color: var(--primary-color);
+            font-weight: 700;
+            font-size: 1.05rem;
+        }
+
+        .btn-nav {
+            background: var(--card-bg);
+            color: white;
+            border: 1px solid var(--border-color);
+            padding: 6px 14px;
+            cursor: pointer;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+
+        .btn-nav:hover {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+            background: rgba(204, 160, 40, 0.05);
+        }
+
+        /* Pick Nomination Panel */
+        .control-panel {
+            background: var(--panel-bg);
+            padding: 12px 20px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            flex-wrap: wrap;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .control-panel strong {
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--primary-color);
+        }
+
+        .control-panel select, .control-panel input {
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            color: white;
+            padding: 6px 12px;
+            font-size: 0.9rem;
+            border-radius: 6px;
+            transition: border-color 0.2s;
+        }
+
+        .control-panel select:focus, .control-panel input:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .control-panel input[type="text"] {
+            flex: 2;
+            min-width: 250px;
+        }
+
+        .control-panel input[type="number"] {
+            width: 85px;
+        }
+
+        .btn-action {
+            background-color: var(--primary-color);
+            color: #000;
+            font-weight: 700;
+            border: none;
+            padding: 7px 18px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            text-transform: uppercase;
+            font-size: 0.85rem;
+        }
+
+        .btn-action:hover {
+            background-color: var(--primary-hover);
+        }
+
+        /* 12-TEAM GRID SETUP */
+        .board-container {
+            flex: 1;
+            padding: 12px;
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 12px;
+            background: var(--bg-color);
+        }
+
+        @media (max-width: 1200px) {
+            .board-container {
+                grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)) !important;
+            }
+        }
+
+        /* Compact Team Cards */
+        .team-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.25);
+        }
+
+        .team-card.current-picker {
+            border: 1px solid var(--primary-color);
+            box-shadow: 0 0 16px rgba(204, 160, 40, 0.25);
+        }
+
+        .team-header {
+            background-color: rgba(0, 0, 0, 0.35);
+            padding: 8px 6px;
+            text-align: center;
+            border-bottom: 1.5px solid var(--border-color);
+            position: relative;
+        }
+
+        .team-card.current-picker .team-header {
+            border-bottom-color: var(--primary-color);
+        }
+
+        .team-order-badge {
+            position: absolute;
+            left: 8px;
+            top: 6px;
+            font-size: 0.7rem;
+            font-weight: 800;
+            background: var(--primary-color);
+            color: #000;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .team-name {
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            padding: 0 20px;
+        }
+
+        .team-stats {
+            display: flex;
+            justify-content: space-around;
+            padding: 5px 4px;
+            background: rgba(0,0,0,0.25);
+            border-bottom: 1px solid var(--border-color);
+            font-size: 0.85rem;
+        }
+
+        .stat-box {
+            text-align: center;
+            flex: 1;
+        }
+
+        .stat-label {
+            color: var(--text-muted);
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        .stat-value {
+            font-weight: 800;
+            color: #fff;
+        }
+
+        .stat-value.gold {
+            color: var(--primary-color);
+        }
+
+        /* Compact Roster Table - MAXIMIZED READABILITY */
+        .roster-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem; /* MAXIMIZED text size for legibility */
+            line-height: 1.1;
+        }
+
+        .roster-table tr:nth-child(even) {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .roster-table td {
+            padding: 3px 5px; /* Extremely tight vertical padding for space management */
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .roster-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .pos-col {
+            width: 25%;
+            font-weight: 800;
+            color: var(--primary-color);
+        }
+
+        .player-col {
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .cost-col {
+            width: 20%;
+            text-align: right;
+            font-weight: 800;
+            color: var(--primary-color);
+        }
+
+        .empty-slot {
+            color: rgba(255,255,255,0.12);
+            font-style: italic;
+            font-weight: normal;
+        }
+
+        /* Footer Info */
+        footer {
+            background-color: var(--panel-bg);
+            border-top: 1px solid var(--border-color);
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 -4px 12px rgba(0,0,0,0.5);
+        }
+
+        .expensive-tracker {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+        }
+
+        .expensive-tracker span {
+            color: var(--primary-color);
+            font-weight: 700;
+        }
+
+        .footer-buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn-danger {
+            background-color: var(--danger-color);
+            color: white;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.85rem;
+            transition: opacity 0.2s;
+        }
+
+        .btn-danger:hover {
+            opacity: 0.9;
+        }
+
+        /* TOAST NOTIFICATION */
+        #toast-notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--primary-color);
+            color: #000;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 1.15rem;
+            font-weight: 700;
+            z-index: 9999;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.7);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        #toast-notification.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* MODALS (Common structure) */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 20px;
+        }
+
+        .modal-content {
+            background: var(--panel-bg);
+            border: 1px solid var(--primary-color);
+            border-radius: 12px;
+            width: 100%;
+            max-width: 1400px;
+            height: 90vh;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+            margin-bottom: 15px;
+        }
+
+        .modal-header h2 {
+            color: var(--primary-color);
+            text-transform: uppercase;
+            font-weight: 800;
+            font-size: 1.4rem;
+        }
+
+        .modal-body {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        /* Scrollbar customization */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--bg-color);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-color);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- AUTOCOMPLETE REPOSITORY FOR NFL PLAYERS -->
+    <datalist id="player-repo-list"></datalist>
+
+    <!-- TOAST NOTIFICATION UI -->
+    <div id="toast-notification">Next up: Someone's Turn</div>
+
+    <!-- SECTION 1: WELCOME AND SETUP -->
+    <div id="setup-view" class="view-section active">
+        <div class="welcome-container">
+            <div class="welcome-header">
+                <h1 id="welcome-league-name">Puck Jesus' Blessed Union</h1>
+                <p>Auction Draft Board Setup</p>
+            </div>
+
+            <div class="setup-row">
+                <label for="draft-year">Draft Year:</label>
+                <input type="number" id="draft-year" value="2026" min="2000" max="2100">
+
+                <label for="setup-budget" style="margin-left: 20px;">Starting Budget ($):</label>
+                <input type="number" id="setup-budget" value="250" min="10" max="1000" style="width: 80px;">
+            </div>
+
+            <!-- DYNAMIC TEAM SIZE & ROSTER CONTROLLER -->
+            <div class="setup-row" style="margin-bottom: 5px;">
+                <label>Number of Teams:</label>
+                <button class="btn-small" onclick="adjustNumManagers(-1)" style="font-size: 1.1rem; padding: 2px 10px;">-</button>
+                <span id="num-managers-display" style="font-weight: bold; font-size: 1.2rem; min-width: 35px; text-align: center; color: var(--primary-color);">12</span>
+                <button class="btn-small" onclick="adjustNumManagers(1)" style="font-size: 1.1rem; padding: 2px 10px;">+</button>
+            </div>
+
+            <div class="setup-row" style="flex-wrap: wrap; margin-bottom: 15px;">
+                <label style="width: 100%; text-align: center;">Roster Configuration:</label>
+                <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:center; margin-top:5px; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);">
+                    <div class="roster-setup-item">
+                        <label>QB</label><input type="number" id="roster-qb" value="1" min="0" max="5">
+                    </div>
+                    <div class="roster-setup-item">
+                        <label>RB</label><input type="number" id="roster-rb" value="1" min="0" max="8">
+                    </div>
+                    <div class="roster-setup-item">
+                        <label>WR</label><input type="number" id="roster-wr" value="2" min="0" max="8">
+                    </div>
+                    <div class="roster-setup-item">
+                        <label>TE</label><input type="number" id="roster-te" value="1" min="0" max="5">
+                    </div>
+                    <div class="roster-setup-item">
+                        <label>FLEX</label><input type="number" id="roster-flex" value="1" min="0" max="5">
+                    </div>
+                    <div class="roster-setup-item">
+                        <label>K</label><input type="number" id="roster-k" value="1" min="0" max="5">
+                    </div>
+                    <div class="roster-setup-item">
+                        <label>DEF</label><input type="number" id="roster-def" value="1" min="0" max="5">
+                    </div>
+                    <div class="roster-setup-item">
+                        <label>BN</label><input type="number" id="roster-bn" value="4" min="0" max="15">
+                    </div>
+                </div>
+            </div>
+
+            <div class="manager-list-container">
+                <div class="manager-list-header">
+                    <h3>Configure Managers & Draft Order</h3>
+                    <div>
+                        <button class="btn-small" onclick="randomizeDraftOrder()">Randomize Order</button>
+                        <button class="btn-small" style="margin-left: 5px;" onclick="resetSetupNames()">Reset to Defaults</button>
+                    </div>
+                </div>
+
+                <!-- ASSIGNMENT UI (NO SCROLL BAR) -->
+                <div class="setup-assignment-wrapper">
+                    <div class="setup-col">
+                        <h4>1. Edit & Select Manager</h4>
+                        <div id="setup-pool-list"></div>
+                    </div>
+                    <div class="setup-col">
+                        <h4>2. Assign Draft Spot</h4>
+                        <div id="setup-order-list"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="start-btn-container">
+                <button class="btn-primary" onclick="initiateDraft()">START DRAFT</button>
+            </div>
+
+            <!-- HISTORICAL ARCHIVES -->
+            <div class="archives-box">
+                <h3>Completed Draft Archives</h3>
+                <div class="archives-list" id="archives-list">
+                    <p style="color: var(--text-muted); font-style: italic;">No saved drafts found. Complete a draft to archive it.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECTION 2: THE ACTIVE DRAFT BOARD -->
+    <div id="draft-view" class="view-section">
+        <header>
+            <div class="logo-section">
+                <h1 id="header-league-name">Puck Jesus' Blessed Union</h1>
+                <p>
+                    <span id="header-year-display">2026</span> Draft Season • $<span id="header-budget-display">250</span> Budget • 
+                    <span id="header-spots-display">12</span> Roster Spots
+                    <span id="wake-lock-badge" style="font-size: 0.75rem; color: #aaa; border: 1px solid #444; padding: 2px 6px; border-radius: 4px; margin-left: 10px;">Wake Lock: Inactive</span>
+                </p>
+            </div>
+            <div class="draft-info">
+                <div class="turn-box">
+                    Round: <span id="round-display" class="turn-highlight">1</span>
+                </div>
+                <div class="turn-box">
+                    Elapsed: <span id="elapsed-time-display" class="turn-highlight">00:00:00</span>
+                </div>
+                <div class="turn-box" style="border-left-color: var(--primary-color);">
+                    Nominating: <span id="current-drafter" class="turn-highlight">-</span>
+                </div>
+                <div class="turn-box" style="border-left-color: var(--text-muted);">
+                    On Deck: <span id="next-drafter" style="color: white; font-weight: bold;">-</span>
+                </div>
+                <button class="btn-nav" onclick="completeNominationTurn()">Skip Nomination</button>
+                <button class="btn-nav" style="background:var(--card-bg);" onclick="goToSetup()">Setup Board</button>
+            </div>
+        </header>
+
+        <!-- INPUT ACTION PANEL - REMOVED POSITION SELECTOR FOR SIMPLIFICATION -->
+        <div class="control-panel">
+            <strong>Log Bid:</strong>
+            <select id="draft-team-select" title="Assign To Team"></select>
+
+            <!-- INPUT BINDED TO AUTOCOMPLETE PLAYERS REPOSITORY DATALIST -->
+            <input type="text" id="draft-player-name" placeholder="Start typing player name..." list="player-repo-list" autocomplete="off">
+            <input type="number" id="draft-cost" placeholder="$ Cost" min="1" max="1000">
+
+            <button class="btn-action" onclick="processDraftPick()">Process Pick</button>
+        </div>
+
+        <!-- BOARD GRID (Dynamically adapted columns) -->
+        <div class="board-container" id="board-grid">
+            <!-- Dynamically populated -->
+        </div>
+
+        <!-- FOOTER STATS & LOGISTICS -->
+        <footer>
+            <div class="expensive-tracker">
+                Most Expensive Player Overall: <span id="most-expensive-display">None ($0)</span>
+            </div>
+            <div class="footer-buttons">
+                <button class="btn-nav" onclick="downloadDraftBackup()">Download Backup JSON</button>
+                <button class="btn-danger" onclick="archiveDraftConfirm()">Complete & Archive Draft</button>
+            </div>
+        </footer>
+    </div>
+
+    <!-- ARCHIVE VIEW MODAL -->
+    <div id="archive-modal" class="modal" onclick="closeArchiveModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h2 id="modal-title">Past Draft Board</h2>
+                <button class="btn-danger" onclick="document.getElementById('archive-modal').style.display='none'">Close View</button>
+            </div>
+            <div class="modal-body">
+                <div class="board-container" id="modal-board-grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- END OF ROUND POPUP MODAL -->
+    <div id="round-modal" class="modal" style="z-index: 1001;">
+        <div class="modal-content" style="max-width: 550px; height: auto; text-align: center; justify-content: center; gap: 15px; margin: auto;">
+            <h2 style="color: var(--primary-color); font-size: 2rem; text-transform: uppercase;">End of Round <span id="ended-round-number">1</span></h2>
+            <p style="font-size: 1.1rem; color: #fff;">Every manager has completed their nomination for this round.</p>
+            <div style="margin: 5px 0; border: 1px dashed var(--border-color); padding: 15px; border-radius: 6px; background: rgba(0,0,0,0.4); text-align: left; display: flex; flex-direction: column; gap: 10px;">
+                <p style="color: var(--text-muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; text-align: center; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; margin-bottom: 5px;">Round Milestone Stats</p>
+                <p style="font-size: 0.95rem; color: #fff;">
+                    ⏱️ <strong>Round Duration:</strong> <span id="round-modal-duration" style="color: var(--primary-color);">0s</span>
+                </p>
+                <p style="font-size: 0.95rem; color: #fff;">
+                    🔥 <strong>Top Pick of Round <span id="ended-round-num-sub">1</span>:</strong> <br>
+                    <span id="round-modal-round-top" style="color: var(--primary-color); font-weight: bold;">-</span>
+                </p>
+                <p style="font-size: 0.95rem; color: #fff;">
+                    🏆 <strong>Top Pick Overall:</strong> <br>
+                    <span id="round-modal-overall-top" style="color: var(--primary-color); font-weight: bold;">-</span>
+                </p>
+            </div>
+            <button class="btn-primary" onclick="proceedToNextRound()" style="padding: 10px 25px; font-size: 1.1rem; margin: 10px auto 0 auto; display: block;">Move onto Next Round</button>
+        </div>
+    </div>
+
+    <!-- CUSTOM PLAYER INGESTION FALLBACK MODAL -->
+    <div id="custom-player-modal" class="modal" style="z-index: 1002;">
+        <div class="modal-content" style="max-width: 400px; height: auto; text-align: center; justify-content: center; gap: 15px; margin: auto;">
+            <h2 style="color: var(--primary-color); font-size: 1.5rem; text-transform: uppercase;">Custom Player Detected</h2>
+            <p style="font-size: 0.95rem; color: #fff;">Please specify the position and team for <strong id="custom-player-display-name"></strong>:</p>
+            <div style="display: flex; flex-direction: column; gap: 10px; text-align: left;">
+                <label style="font-size: 0.85rem; color: var(--text-muted); font-weight: bold;">Position:</label>
+                <select id="custom-player-pos" style="background: var(--bg-color); border: 1px solid var(--border-color); color: white; padding: 8px; border-radius: 6px;">
+                    <option value="QB">QB</option>
+                    <option value="RB">RB</option>
+                    <option value="WR">WR</option>
+                    <option value="TE">TE</option>
+                    <option value="K">K</option>
+                    <option value="Def/ST">Def/ST</option>
+                </select>
+                <label style="font-size: 0.85rem; color: var(--text-muted); font-weight: bold;">Team (3-letter abbreviation):</label>
+                <input type="text" id="custom-player-team" placeholder="e.g. KC, SF, DAL" maxlength="4" style="background: var(--bg-color); border: 1px solid var(--border-color); color: white; padding: 8px; border-radius: 6px; text-transform: uppercase;">
+            </div>
+            <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <button class="btn-action" style="flex: 1;" onclick="submitCustomPlayer()">Add & Process</button>
+                <button class="btn-danger" style="flex: 1; padding: 8px;" onclick="cancelCustomPlayer()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const DEFAULT_MANAGERS = [
+            "A-Dubs", "Kyrie", "Big Slice", "Big Daddy", 
+            "Coach", "O'C", "Puck Jesus", "DOC", 
+            "Logan", "Mexi-Law", "Noel", "Sicario"
+        ];
+
+        const DEFAULT_ROSTER_SLOTS = [
+            "QB", "RB", "WR", "WR", "TE", "FLEX", "K", "Def/ST", "Bench", "Bench", "Bench", "Bench"
+        ];
+
+        const STARTING_BUDGET = 250;
+
+        // Autocomplete Player Repository List formatted as "Name, POS, TEAM"
+        const PLAYER_REPOSITORY = [
+            // QBs
+            "Josh Allen, QB, BUF", "Jayden Daniels, QB, WAS", "Lamar Jackson, QB, BAL", "Drake Maye, QB, NE", 
+            "Jalen Hurts, QB, PHI", "Joe Burrow, QB, CIN", "Jaxson Dart, QB, NYG", "Trevor Lawrence, QB, JAC", 
+            "Dak Prescott, QB, DAL", "Bo Nix, QB, DEN", "Brock Purdy, QB, SF", "Matthew Stafford, QB, LAR", 
+            "Caleb Williams, QB, CHI", "Justin Herbert, QB, LAC", "Patrick Mahomes, QB, KC", "Kyler Murray, QB, MIN", 
+            "Tyler Shough, QB, NO", "Daniel Jones, QB, IND", "Jared Goff, QB, DET", "Baker Mayfield, QB, TB", 
+            "Malik Willis, QB, MIA", "Jordan Love, QB, GB", "Cam Ward, QB, TEN", "C.J. Stroud, QB, HOU", 
+            "Sam Darnold, QB, SEA", "Bryce Young, QB, CAR", "Fernando Mendoza, QB, LV", "Geno Smith, QB, NYJ", 
+            "Aaron Rodgers, QB, PIT", "Deshaun Watson, QB, CLE", "Jacoby Brissett, QB, ARI", "Tua Tagovailoa, QB, ATL", 
+            "Shedeur Sanders, QB, CLE", "Kirk Cousins, QB, LV", "Michael Penix Jr., QB, ATL", "J.J. McCarthy, QB, MIN", 
+            "Carson Beck, QB, ARI", "Justin Fields, QB, KC", "Joe Flacco, QB, CIN", "Mac Jones, QB, SF",
+
+            // RBs
+            "Jahmyr Gibbs, RB, DET", "Bijan Robinson, RB, ATL", "Christian McCaffrey, RB, SF", "Jonathan Taylor, RB, IND", 
+            "De'Von Achane, RB, MIA", "Jeremiyah Love, RB, ARI", "James Cook III, RB, BUF", "Ashton Jeanty, RB, LV", 
+            "Omarion Hampton, RB, LAC", "Saquon Barkley, RB, PHI", "Derrick Henry, RB, BAL", "Josh Jacobs, RB, GB", 
+            "Chase Brown, RB, CIN", "Breece Hall, RB, NYJ", "Kenneth Walker III, RB, KC", "Javonte Williams, RB, DAL", 
+            "Kyren Williams, RB, LAR", "Travis Etienne Jr., RB, NO", "Cam Skattebo, RB, NYG", "Quinshon Judkins, RB, CLE", 
+            "Bucky Irving, RB, TB", "TreVeyon Henderson, RB, NE", "Bhayshul Tuten, RB, JAC", "Jadarian Price, RB, SEA", 
+            "D'Andre Swift, RB, CHI", "David Montgomery, RB, HOU", "Tony Pollard, RB, TEN", "Jaylen Warren, RB, PIT", 
+            "Rhamondre Stevenson, RB, NE", "Rico Dowdle, RB, PIT", "Chuba Hubbard, RB, CAR", "Aaron Jones Sr., RB, MIN", 
+            "Kenny Gainwell, RB, TB", "Rachaad White, RB, WAS", "J.K. Dobbins, RB, DEN", "RJ Harvey, RB, DEN", 
+            "Kyle Monangai, RB, CHI", "Jonathon Brooks, RB, CAR", "Jacory Croskey-Merritt, RB, WAS", "Blake Corum, RB, LAR", 
+            "Woody Marks, RB, HOU", "Jordan Mason, RB, MIN", "Zach Charbonnet, RB, SEA", "Alvin Kamara, RB, NO", 
+            "Isiah Pacheco, RB, DET", "Chris Rodriguez Jr., RB, JAC", "Tank Bigsby, RB, PHI", "Mike Washington Jr., RB, LV", 
+            "Ray Davis, RB, BUF", "Brian Robinson Jr., RB, ATL", "Tyrone Tracy Jr., RB, NYG", "Braelon Allen, RB, NYJ", 
+            "Tyjae Spears, RB, TEN", "Tyler Allgeier, RB, ARI", "James Conner, RB, ARI", "Keaton Mitchell, RB, LAC", 
+            "Dylan Sampson, RB, CLE", "Justice Hill, BAL", "Jordan James, RB, SF", "Kaelon Black, RB, SF", 
+            "Kaytron Allen, RB, WAS", "Nicholas Singleton, RB, TEN", "Demond Claiborne, RB, MIN", "Jonah Coleman, RB, DEN", 
+            "Seth McGowan, RB, IND", "Emmett Johnson, RB, KC", "Samaje Perine, RB, CIN", "LeQuint Allen, RB, JAC", 
+            "Jaylen Wright, RB, MIA", "Ollie Gordon II, RB, MIA", "Kimani Vidal, RB, LAC", "Adam Randall, RB, BAL", 
+            "MarShawn Lloyd, RB, GB", "Emari Demercado, RB, KC", "Jaydon Blue, RB, DAL", "Trey Benson, RB, ARI", 
+            "Kaleb Johnson, RB, PIT", "Ty Johnson, RB, BUF", "Kyle Juszczyk, RB, SF", "Chris Brooks, RB, GB", 
+            "George Holani, RB, SEA", "Isaiah Davis, RB, NYJ", "DJ Giddens, RB, IND", "Malik Davis, RB, DAL", "Sean Tucker, RB, TB",
+
+            // WRs
+            "Puka Nacua, WR, LAR", "Ja'Marr Chase, WR, CIN", "Jaxon Smith-Njigba, WR, SEA", "Amon-Ra St. Brown, WR, DET", 
+            "CeeDee Lamb, WR, DAL", "Justin Jefferson, WR, MIN", "Drake London, WR, ATL", "Rashee Rice, WR, KC", 
+            "Nico Collins, WR, HOU", "Garrett Wilson, WR, NYJ", "A.J. Brown, WR, NE", "Chris Olave, WR, NO", 
+            "George Pickens, WR, DAL", "Tetairoa McMillan, WR, CAR", "Zay Flowers, WR, BAL", "DeVonta Smith, WR, PHI", 
+            "Emeka Egbuka, WR, TB", "Malik Nabers, WR, NYG", "Davante Adams, WR, LAR", "Ladd McConkey, WR, LAC", 
+            "Terry McLaurin, WR, WAS", "Tee Higgins, WR, CIN", "Jaylen Waddle, WR, DEN", "Jameson Williams, WR, DET", 
+            "Carnell Tate, WR, TEN", "Rome Odunze, WR, CHI", "Luther Burden III, WR, CHI", "DJ Moore, WR, BUF", 
+            "Marvin Harrison Jr., WR, ARI", "Courtland Sutton, WR, DEN", "Michael Pittman Jr., WR, PIT", "DK Metcalf, WR, PIT", 
+            "Alec Pierce, WR, IND", "Jordyn Tyson, WR, NO", "Parker Washington, WR, JAC", "Christian Watson, WR, GB", 
+            "Matthew Golden, WR, GB", "Mike Evans, WR, SF", "Brian Thomas Jr., WR, JAC", "Jakobi Meyers, WR, JAC", 
+            "Wan'Dale Robinson, WR, TEN", "Makai Lemon, WR, PHI", "Michael Wilson, WR, ARI", "Ricky Pearsall, WR, SF", 
+            "Jordan Addison, WR, MIN", "Khalil Shakir, WR, BUF", "Jayden Reed, WR, GB", "Josh Downs, WR, IND", 
+            "KC Concepcion, WR, CLE", "Chris Godwin Jr., WR, TB", "Xavier Worthy, WR, KC", "Romeo Doubs, WR, NE", 
+            "Quentin Johnston, WR, LAC", "Jayden Higgins, WR, HOU", "Jerry Jeudy, WR, CLE", "Jalen Coker, WR, CAR", 
+            "Rashid Shaheed, WR, SEA", "Jalen McMillan, WR, TB", "Calvin Ridley, WR, TEN", "Denzel Boston, WR, CLE", 
+            "Travis Hunter, WR, JAC", "Germie Bernard, WR, PIT", "Antonio Williams, WR, WAS", "Adonai Mitchell, WR, NYJ", 
+            "Omar Cooper Jr., WR, NYJ", "Tre Tucker, WR, LV", "Jalen Nailor, WR, LV", "De'Zhaun Stribling, WR, SF", 
+            "Rashod Bateman, WR, BAL", "Jauan Jennings, WR, MIN", "Jaylin Noel, WR, HOU", "Darnell Mooney, WR, NYG", 
+            "Chris Bell, WR, MIA", "Jack Bech, WR, LV", "Deebo Samuel Sr., WR, FA", "Stefon Diggs, WR, FA", 
+            "Tre Harris, WR, LAC", "Isaac TeSlaa, WR, DET", "Ryan Flournoy, WR, DAL", "Brandon Aiyuk, WR, SF", 
+            "Cooper Kupp, WR, SEA", "Tank Dell, WR, HOU", "Zachariah Branch, WR, ATL", "Caleb Douglas, WR, MIA", 
+            "Jalen Tolbert, WR, MIA", "Malik Washington, WR, MIA", "Savion Williams, WR, GB", "Chris Brazzell II, WR, CAR", 
+            "Tyreek Hill, WR, FA", "Xavier Legette, WR, CAR",
+
+            // TEs
+            "Trey McBride, TE, ARI", "Brock Bowers, TE, LV", "Colston Loveland, TE, CHI", "Tyler Warren, TE, IND", 
+            "Kyle Pitts Sr., TE, ATL", "Harold Fannin Jr., TE, CLE", "Sam LaPorta, TE, DET", "George Kittle, TE, SF", 
+            "Dallas Goedert, TE, PHI", "Tucker Kraft, TE, GB", "Travis Kelce, TE, KC", "Jake Ferguson, TE, DAL", 
+            "Mark Andrews, TE, BAL", "T.J. Hockenson, TE, MIN", "Kenyon Sadiq, TE, NYJ", "Isaiah Likely, TE, NYG", 
+            "Dalton Kincaid, TE, BUF", "Hunter Henry, TE, NE", "Terrance Ferguson, TE, LAR", "Juwan Johnson, TE, NO", 
+            "Brenton Strange, TE, JAC", "Pat Freiermuth, TE, PIT", "Dallas Goedert, TE, PHI", "Gunnar Helm, TE, TEN", 
+            "Oronde Gadsden, TE, LAC", "Chig Okonkwo, TE, WAS", "AJ Barner, TE, SEA", "Greg Dulcich, TE, MIA", 
+            "Cade Otton, TE, TB", "Mike Gesicki, TE, CIN", "Evan Engram, TE, DEN", "David Njoku, TE, LAC", 
+            "Michael Mayer, TE, LV", "Jake Tonges, TE, SF", "Ja'Tavion Sanders, TE, CAR",
+
+            // DSTs
+            "Broncos D/ST, Def/ST, DEN", "Texans D/ST, Def/ST, HOU", "Steelers D/ST, Def/ST, PIT", "Seahawks D/ST, Def/ST, SEA", 
+            "Rams D/ST, Def/ST, LAR", "Ravens D/ST, Def/ST, BAL", "Eagles D/ST, Def/ST, PHI", "Browns D/ST, Def/ST, CLE", 
+            "Patriots D/ST, Def/ST, NE", "Lions D/ST, Def/ST, DET", "Chiefs D/ST, Def/ST, KC", "Chargers D/ST, Def/ST, LAC", 
+            "Buccaneers D/ST, Def/ST, TB", "Packers D/ST, Def/ST, GB", "Jaguars D/ST, Def/ST, JAC",
+
+            // Kickers
+            "Brandon Aubrey, K, DAL", "Cameron Dicker, K, LAC", "Jason Myers, K, SEA", "Harrison Mevis, K, LAR", 
+            "Ka'imi Fairbairn, K, HOU", "Eddy Pineiro, K, SF", "Harrison Butker, K, KC", "Cam Little, K, JAC", 
+            "Jake Bates, K, DET", "Tyler Loop, K, BAL", "Cairo Santos, K, CHI", "Will Reichard, K, MIN", 
+            "Chris Boswell, K, PIT", "Chase McLaughlin, K, TB", "Evan McPherson, K, CIN"
+        ];
+
+        // Setup Page Variables
+        let setupNumManagers = 12;
+        let setupManagerNames = [...DEFAULT_MANAGERS];
+        let draftOrderAssignments = new Array(12).fill(null); // Maps Spot Index to Manager ID
+        let activeManagerToAssign = null; // Currently clicked manager
+
+        let timerInterval = null;
+        let wakeLock = null;
+
+        // Active State of App
+        let appState = {
+            year: 2026,
+            startingBudget: 250,
+            rosterSlots: [...DEFAULT_ROSTER_SLOTS],
+            teams: [], 
+            currentNominatorIndex: 0, 
+            mostExpensive: { player: "None", cost: 0, team: "" },
+            roundMostExpensive: { player: "None", cost: 0, team: "" },
+            currentRound: 1,
+            roundTurnsCompleted: 0,
+            elapsedSeconds: 0,
+            roundStartElapsedSeconds: 0,
+            timerRunning: false,
+            lastUpdatedTime: 0
+        };
+
+        let toastTimeout = null;
+        let pendingPick = null; // For holding pick payload when custom player modal triggers
+
+        // Display popup notification for the user's turn
+        function showToast(message) {
+            const toast = document.getElementById('toast-notification');
+            toast.innerText = message;
+            toast.classList.add('show');
+
+            if (toastTimeout) clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // Initialize App
+        window.onload = function() {
+            // Ensure autocomplete only filters dynamically when input starts capturing letters
+            document.getElementById('draft-player-name').addEventListener('input', function(e) {
+                if (e.target.value.length > 0) {
+                    e.target.setAttribute('list', 'player-repo-list');
+                } else {
+                    e.target.setAttribute('list', '');
+                }
+            });
+
+            const savedState = localStorage.getItem('ffb_active_state');
+            if (savedState) {
+                appState = JSON.parse(savedState);
+                setupNumManagers = appState.teams.length;
+                document.getElementById('num-managers-display').innerText = setupNumManagers;
+
+                if (!appState.roundStartElapsedSeconds) appState.roundStartElapsedSeconds = 0;
+                if (!appState.roundMostExpensive) appState.roundMostExpensive = { player: "None", cost: 0, team: "" };
+                if (!appState.startingBudget) appState.startingBudget = STARTING_BUDGET;
+                if (!appState.rosterSlots) appState.rosterSlots = [...DEFAULT_ROSTER_SLOTS];
+
+                if (appState.timerRunning) {
+                    const timePassed = Math.floor((Date.now() - appState.lastUpdatedTime) / 1000);
+                    if (timePassed > 0) appState.elapsedSeconds += timePassed;
+                    startTimer();
+                }
+                goToDraftView();
+                requestWakeLock();
+                updatePlayerDatalist();
+            } else {
+                renderSetupManagers();
+                loadArchivesList();
+                updatePlayerDatalist();
+            }
+        };
+
+        // Dynamic Datatlist Option filtering to exclude already drafted players
+        function updatePlayerDatalist() {
+            const playerDatalist = document.getElementById('player-repo-list');
+            playerDatalist.innerHTML = '';
+
+            // Get all drafted players across all teams
+            const draftedPlayers = new Set();
+            if (appState && appState.teams) {
+                appState.teams.forEach(team => {
+                    team.roster.forEach(slot => {
+                        if (slot.player) {
+                            draftedPlayers.add(slot.player.toLowerCase().trim());
+                        }
+                    });
+                });
+            }
+
+            PLAYER_REPOSITORY.sort().forEach(player => {
+                const playerClean = player.toLowerCase().trim();
+                let isDrafted = false;
+                // Checks for exact matches to filter drafted players out of datalist
+                draftedPlayers.forEach(dp => {
+                    if (playerClean === dp || playerClean.startsWith(dp) || dp.startsWith(playerClean)) {
+                        isDrafted = true;
+                    }
+                });
+
+                if (!isDrafted) {
+                    const opt = document.createElement('option');
+                    opt.value = player;
+                    playerDatalist.appendChild(opt);
+                }
+            });
+        }
+
+        // 1. SETUP PAGE LOGIC
+
+        // Adjust Spot Count (8 - 14)
+        function adjustNumManagers(diff) {
+            let newNum = setupNumManagers + diff;
+            if (newNum < 8 || newNum > 14) return;
+
+            if (newNum > setupNumManagers) {
+                // Expanding
+                setupManagerNames.push(DEFAULT_MANAGERS[setupNumManagers] || `Manager ${newNum}`);
+                draftOrderAssignments.push(null);
+            } else {
+                // Shrinking
+                setupManagerNames.pop();
+                draftOrderAssignments.pop();
+                // Remove any assignments that pointed to the popped manager
+                for (let i = 0; i < draftOrderAssignments.length; i++) {
+                    if (draftOrderAssignments[i] >= newNum) {
+                        draftOrderAssignments[i] = null;
+                    }
+                }
+                if (activeManagerToAssign >= newNum) {
+                    activeManagerToAssign = null;
+                }
+            }
+
+            setupNumManagers = newNum;
+            document.getElementById('num-managers-display').innerText = setupNumManagers;
+            renderSetupManagers();
+        }
+
+        function updateManagerName(id, val) {
+            setupManagerNames[id] = val;
+
+            // If they are assigned to a spot, update that visual silently without re-rendering everything
+            const spotIndex = draftOrderAssignments.indexOf(id);
+            if (spotIndex !== -1) {
+                const spotNameDisplay = document.getElementById(`spot-name-display-${spotIndex}`);
+                if (spotNameDisplay) spotNameDisplay.innerText = val;
+            }
+        }
+
+        function setActiveManager(id) {
+            if (activeManagerToAssign === id) {
+                activeManagerToAssign = null; // Toggle off
+            } else {
+                activeManagerToAssign = id; // Toggle on
+            }
+            renderSetupManagers();
+        }
+
+        function assignSpot(spotIndex) {
+            if (activeManagerToAssign !== null) {
+                // Remove manager from old spot if they are already assigned somewhere else
+                const existingIndex = draftOrderAssignments.indexOf(activeManagerToAssign);
+                if (existingIndex !== -1) {
+                    draftOrderAssignments[existingIndex] = null;
+                }
+
+                // Assign to new spot
+                draftOrderAssignments[spotIndex] = activeManagerToAssign;
+                activeManagerToAssign = null;
+                renderSetupManagers();
+            }
+        }
+
+        function unassignSpot(spotIndex, event) {
+            event.stopPropagation(); // Don't trigger the assign click
+            draftOrderAssignments[spotIndex] = null;
+            renderSetupManagers();
+        }
+
+        // Render input fields and order spots dynamically
+        function renderSetupManagers() {
+            const poolList = document.getElementById('setup-pool-list');
+            const orderList = document.getElementById('setup-order-list');
+
+            poolList.innerHTML = '';
+            orderList.innerHTML = '';
+
+            // Left Column: Pool
+            for (let i = 0; i < setupNumManagers; i++) {
+                const isAssigned = draftOrderAssignments.includes(i);
+                const isActive = (activeManagerToAssign === i);
+
+                const item = document.createElement('div');
+                item.className = `pool-item ${isAssigned ? 'assigned' : ''}`;
+
+                item.innerHTML = `
+                    <input type="text" value="${setupManagerNames[i]}" onchange="updateManagerName(${i}, this.value)">
+                    <button class="btn-select ${isActive ? 'active' : ''}" onclick="setActiveManager(${i})">
+                        ${isActive ? 'Selected' : (isAssigned ? 'Move' : 'Select')}
+                    </button>
+                `;
+                poolList.appendChild(item);
+            }
+
+            // Right Column: Order Slots
+            const isAnyActive = activeManagerToAssign !== null;
+
+            for (let j = 0; j < setupNumManagers; j++) {
+                const assignedManagerId = draftOrderAssignments[j];
+                const isFilled = assignedManagerId !== null;
+
+                const spot = document.createElement('div');
+                spot.className = `spot-item ${isFilled ? 'filled' : ''} ${isAnyActive && !isFilled ? 'pulse' : ''}`;
+                spot.onclick = () => assignSpot(j);
+
+                if (isFilled) {
+                    spot.innerHTML = `
+                        <span class="spot-num">Spot ${j + 1}</span>
+                        <span class="spot-name" id="spot-name-display-${j}">${setupManagerNames[assignedManagerId]}</span>
+                        <button class="btn-unassign" onclick="unassignSpot(${j}, event)">×</button>
+                    `;
+                } else {
+                    spot.innerHTML = `
+                        <span class="spot-num">Spot ${j + 1}</span>
+                        <span class="spot-name" style="color: var(--text-muted); font-style: italic;">Empty - Click to Assign</span>
+                    `;
+                }
+                orderList.appendChild(spot);
+            }
+        }
+
+        // Reset to default values
+        function resetSetupNames() {
+            setupNumManagers = 12;
+            document.getElementById('num-managers-display').innerText = setupNumManagers;
+            setupManagerNames = [...DEFAULT_MANAGERS];
+            draftOrderAssignments = new Array(12).fill(null);
+            activeManagerToAssign = null;
+            document.getElementById('setup-budget').value = 250;
+            document.getElementById('roster-qb').value = 1;
+            document.getElementById('roster-rb').value = 1; // Default to 1 RB
+            document.getElementById('roster-wr').value = 2;
+            document.getElementById('roster-te').value = 1;
+            document.getElementById('roster-flex').value = 1;
+            document.getElementById('roster-k').value = 1;
+            document.getElementById('roster-def').value = 1;
+            document.getElementById('roster-bn').value = 4;
+            renderSetupManagers();
+        }
+
+        // Randomize Draft Order Assignments
+        function randomizeDraftOrder() {
+            let spots = Array.from({length: setupNumManagers}, (_, i) => i);
+
+            // Fisher-Yates shuffle
+            for (let i = spots.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [spots[i], spots[j]] = [spots[j], spots[i]];
+            }
+
+            draftOrderAssignments = spots;
+            activeManagerToAssign = null;
+            renderSetupManagers();
+        }
+
+        // Initialize Draft State & Go to Board
+        function initiateDraft() {
+            // Validation
+            if (draftOrderAssignments.includes(null)) {
+                alert("Please assign all managers to a draft spot before starting the draft.");
+                return;
+            }
+
+            const yearInput = document.getElementById('draft-year').value;
+            appState.year = yearInput ? parseInt(yearInput) : 2026;
+
+            const startingBudget = parseInt(document.getElementById('setup-budget').value) || 250;
+
+            // Generate Roster Slots based on setup inputs
+            let dynamicRosterSlots = [];
+            const qbCount = parseInt(document.getElementById('roster-qb').value) || 0;
+            const rbCount = parseInt(document.getElementById('roster-rb').value) || 0;
+            const wrCount = parseInt(document.getElementById('roster-wr').value) || 0;
+            const teCount = parseInt(document.getElementById('roster-te').value) || 0;
+            const flexCount = parseInt(document.getElementById('roster-flex').value) || 0;
+            const kCount = parseInt(document.getElementById('roster-k').value) || 0;
+            const defCount = parseInt(document.getElementById('roster-def').value) || 0;
+            const bnCount = parseInt(document.getElementById('roster-bn').value) || 0;
+
+            for(let i=0; i<qbCount; i++) dynamicRosterSlots.push("QB");
+            for(let i=0; i<rbCount; i++) dynamicRosterSlots.push("RB");
+            for(let i=0; i<wrCount; i++) dynamicRosterSlots.push("WR");
+            for(let i=0; i<teCount; i++) dynamicRosterSlots.push("TE");
+            for(let i=0; i<flexCount; i++) dynamicRosterSlots.push("FLEX");
+            for(let i=0; i<kCount; i++) dynamicRosterSlots.push("K");
+            for(let i=0; i<defCount; i++) dynamicRosterSlots.push("Def/ST");
+            for(let i=0; i<bnCount; i++) dynamicRosterSlots.push("Bench");
+
+            appState.startingBudget = startingBudget;
+            appState.rosterSlots = dynamicRosterSlots;
+
+            let tempTeams = [];
+
+            // Compile the teams array mapped to draftOrderAssignments
+            for (let i = 0; i < setupNumManagers; i++) {
+                const managerId = draftOrderAssignments[i];
+                tempTeams.push({
+                    id: managerId, // Give them their original array ID
+                    name: setupManagerNames[managerId],
+                    draftOrder: i + 1,
+                    budget: startingBudget,
+                    roster: dynamicRosterSlots.map(pos => ({ position: pos, player: "", cost: 0 }))
+                });
+            }
+
+            appState.teams = tempTeams;
+            appState.currentNominatorIndex = 0;
+            appState.mostExpensive = { player: "None", cost: 0, team: "" };
+            appState.roundMostExpensive = { player: "None", cost: 0, team: "" };
+            appState.currentRound = 1;
+            appState.roundTurnsCompleted = 0;
+            appState.elapsedSeconds = 0;
+            appState.roundStartElapsedSeconds = 0;
+            appState.timerRunning = true;
+            appState.lastUpdatedTime = Date.now();
+
+            saveCurrentState();
+            startTimer();
+            requestWakeLock();
+            updatePlayerDatalist();
+            goToDraftView();
+
+            const firstTeam = appState.teams[0];
+            if (firstTeam) {
+                showToast("Draft Started! " + firstTeam.name + " is Nominating First.");
+            }
+        }
+
+        function saveCurrentState() {
+            if (appState.timerRunning) {
+                appState.lastUpdatedTime = Date.now();
+            }
+            localStorage.setItem('ffb_active_state', JSON.stringify(appState));
+        }
+
+        function goToDraftView() {
+            document.getElementById('setup-view').classList.remove('active');
+            document.getElementById('draft-view').classList.add('active');
+
+            document.getElementById('header-year-display').innerText = appState.year;
+            document.getElementById('header-budget-display').innerText = appState.startingBudget || 250;
+            document.getElementById('header-spots-display').innerText = appState.rosterSlots ? appState.rosterSlots.length : 12;
+            document.getElementById('round-display').innerText = appState.currentRound;
+
+            renderDraftBoard();
+            populateTeamSelectDropdown();
+            updateTimerDisplay();
+        }
+
+        function goToSetup() {
+            if (confirm("Go back to setup? The current board state and timer will remain saved so you can resume, but changing setup counts/orders will start a new session.")) {
+                if (timerInterval) clearInterval(timerInterval);
+                document.getElementById('draft-view').classList.remove('active');
+                document.getElementById('setup-view').classList.add('active');
+
+                // Keep the assignments populated how they were to prevent confusion
+                renderSetupManagers();
+                loadArchivesList();
+            }
+        }
+
+        // 2. ACTIVE BOARD LOGIC
+
+        function getMaxAllowedBid(team) {
+            const emptySlotsCount = team.roster.filter(slot => slot.player === "").length;
+            if (emptySlotsCount === 0) return 0;
+            return team.budget - (emptySlotsCount - 1);
+        }
+
+        function populateTeamSelectDropdown() {
+            const select = document.getElementById('draft-team-select');
+            select.innerHTML = '';
+
+            appState.teams.forEach(team => {
+                const opt = document.createElement('option');
+                opt.value = team.id;
+                opt.innerText = team.name;
+                select.appendChild(opt);
+            });
+        }
+
+        function renderDraftBoard() {
+            const container = document.getElementById('board-grid');
+            container.innerHTML = '';
+
+            const colsCount = Math.ceil(appState.teams.length / 2);
+            container.style.gridTemplateColumns = `repeat(${colsCount}, 1fr)`;
+
+            appState.teams.forEach((team, idx) => {
+                const isCurrentPicker = (idx === appState.currentNominatorIndex);
+                const maxBid = getMaxAllowedBid(team);
+
+                const card = document.createElement('div');
+                card.className = `team-card ${isCurrentPicker ? 'current-picker' : ''}`;
+
+                let rosterRowsHTML = '';
+                team.roster.forEach((slot, slotIdx) => {
+                    if (slot.player) {
+                        rosterRowsHTML += `
+                            <tr style="cursor: pointer;" onclick="releasePlayer(${team.id}, ${slotIdx})" title="Click to Release/Edit Player (Refunds Cash)">
+                                <td class="pos-col">${slot.position}</td>
+                                <td class="player-col" title="${slot.player}">${slot.player}</td>
+                                <td class="cost-col" style="color: var(--danger-color); font-weight: bold;">$${slot.cost}</td>
+                            </tr>
+                        `;
+                    } else {
+                        rosterRowsHTML += `
+                            <tr>
+                                <td class="pos-col">${slot.position}</td>
+                                <td class="player-col empty-slot">Empty</td>
+                                <td class="cost-col">-</td>
+                            </tr>
+                        `;
+                    }
+                });
+
+                card.innerHTML = `
+                    <div class="team-header">
+                        <div class="team-order-badge">${team.draftOrder}</div>
+                        <div class="team-name" title="${team.name}">${team.name}</div>
+                    </div>
+                    <div class="team-stats">
+                        <div class="stat-box">
+                            <div class="stat-label">Left</div>
+                            <div class="stat-value gold">$${team.budget}</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Max Bid</div>
+                            <div class="stat-value">$${maxBid}</div>
+                        </div>
+                    </div>
+                    <table class="roster-table">
+                        <tbody>
+                            ${rosterRowsHTML}
+                        </tbody>
+                    </table>
+                `;
+                container.appendChild(card);
+            });
+
+            const currentTeam = appState.teams[appState.currentNominatorIndex];
+            const nextTeam = appState.teams[(appState.currentNominatorIndex + 1) % appState.teams.length];
+
+            document.getElementById('current-drafter').innerText = currentTeam ? currentTeam.name : "N/A";
+            document.getElementById('next-drafter').innerText = nextTeam ? nextTeam.name : "N/A";
+
+            const exp = appState.mostExpensive;
+            if (exp.cost > 0) {
+                document.getElementById('most-expensive-display').innerText = `${exp.player} ($${exp.cost}) - Assigned to ${exp.team}`;
+            } else {
+                document.getElementById('most-expensive-display').innerText = "None ($0)";
+            }
+
+            if (currentTeam) {
+                document.getElementById('draft-team-select').value = currentTeam.id;
+            }
+        }
+
+        // UNDO / RELEASE function called when user clicks on a drafted player row
+        function releasePlayer(teamId, slotIdx) {
+            const team = appState.teams.find(t => t.id === teamId);
+            if (!team) return;
+
+            const slot = team.roster[slotIdx];
+            if (!slot || !slot.player) return;
+
+            const confirmRelease = confirm(`Do you want to release "${slot.player}" back to the draft pool and refund $${slot.cost} to ${team.name}?`);
+            if (!confirmRelease) return;
+
+            // Refund budget
+            team.budget += slot.cost;
+
+            const releasedPlayer = slot.player;
+            slot.player = "";
+            slot.cost = 0;
+
+            // Recalculate top pick metrics across the board
+            recalculateMostExpensive();
+
+            saveCurrentState();
+            updatePlayerDatalist();
+            renderDraftBoard();
+            showToast(`Released ${releasedPlayer}. $${team.budget} refunded to ${team.name}.`);
+        }
+
+        // Find the absolute top pick left on the boards
+        function recalculateMostExpensive() {
+            let maxOverall = { player: "None", cost: 0, team: "" };
+            appState.teams.forEach(t => {
+                t.roster.forEach(slot => {
+                    if (slot.player && slot.cost > maxOverall.cost) {
+                        maxOverall = { player: slot.player, cost: slot.cost, team: t.name };
+                    }
+                });
+            });
+            appState.mostExpensive = maxOverall;
+        }
+
+        // Auto-slotting logic based on extracted player position metadata
+        function findBestRosterSlot(team, position) {
+            let primaryPos = position;
+            if (position === "D/ST") primaryPos = "Def/ST";
+
+            // 1. Try to find an empty primary position slot
+            for (let i = 0; i < team.roster.length; i++) {
+                if (team.roster[i].position === primaryPos && team.roster[i].player === "") {
+                    return i;
+                }
+            }
+
+            // 2. Try to find an empty FLEX position slot (only for RB, WR, TE)
+            if (["RB", "WR", "TE"].includes(primaryPos)) {
+                for (let i = 0; i < team.roster.length; i++) {
+                    if (team.roster[i].position === "FLEX" && team.roster[i].player === "") {
+                        return i;
+                    }
+                }
+            }
+
+            // 3. Try to find an empty Bench slot as a fallback
+            for (let i = 0; i < team.roster.length; i++) {
+                if (team.roster[i].position === "Bench" && team.roster[i].player === "") {
+                    return i;
+                }
+            }
+
+            return -1; // Roster is full
+        }
+
+        function processDraftPick() {
+            const teamId = parseInt(document.getElementById('draft-team-select').value);
+            const playerNameInput = document.getElementById('draft-player-name').value.trim();
+            const cost = parseInt(document.getElementById('draft-cost').value);
+
+            if (!playerNameInput) {
+                alert("Please enter a player name.");
+                return;
+            }
+            if (isNaN(cost) || cost < 1) {
+                alert("Please enter a valid bid cost of at least $1.");
+                return;
+            }
+
+            const team = appState.teams.find(t => t.id === teamId);
+            if (!team) return;
+
+            const maxBid = getMaxAllowedBid(team);
+            if (cost > maxBid) {
+                alert(`Transaction Rejected! ${team.name} only has a maximum bid limit of $${maxBid}.`);
+                return;
+            }
+
+            // check if the drafted player metadata (POS and TEAM) already exists on name string
+            if (playerNameInput.includes(',')) {
+                const parts = playerNameInput.split(',');
+                const parsedPosition = parts[1].trim();
+                executeDraftPick(teamId, playerNameInput, parsedPosition, cost);
+            } else {
+                // If it is a brand-new custom player, open the manual custom ingest modal
+                pendingPick = { teamId, playerName: playerNameInput, cost };
+                document.getElementById('custom-player-display-name').innerText = playerNameInput;
+                document.getElementById('custom-player-team').value = '';
+                document.getElementById('custom-player-modal').style.display = 'flex';
+            }
+        }
+
+        // Submits the newly added Custom Player details
+        function submitCustomPlayer() {
+            if (!pendingPick) return;
+            const pos = document.getElementById('custom-player-pos').value;
+            const teamAbbr = document.getElementById('custom-player-team').value.trim().toUpperCase();
+
+            if (!teamAbbr) {
+                alert("Please enter a team abbreviation.");
+                return;
+            }
+
+            const formattedName = `${pendingPick.playerName}, ${pos}, ${teamAbbr}`;
+
+            document.getElementById('custom-player-modal').style.display = 'none';
+
+            // Register this custom player temporarily into our pool
+            if (!PLAYER_REPOSITORY.includes(formattedName)) {
+                PLAYER_REPOSITORY.push(formattedName);
+            }
+
+            executeDraftPick(pendingPick.teamId, formattedName, pos, pendingPick.cost);
+            pendingPick = null;
+        }
+
+        function cancelCustomPlayer() {
+            document.getElementById('custom-player-modal').style.display = 'none';
+            pendingPick = null;
+        }
+
+        // Completes the pick logging process into roster matrices
+        function executeDraftPick(teamId, fullPlayerName, position, cost) {
+            const team = appState.teams.find(t => t.id === teamId);
+            if (!team) return;
+
+            const slotFoundIndex = findBestRosterSlot(team, position);
+
+            if (slotFoundIndex === -1) {
+                alert(`Error: No open roster slot for ${position}, FLEX, or Bench remains for ${team.name}!`);
+                return;
+            }
+
+            // Fill spot
+            team.roster[slotFoundIndex].player = fullPlayerName;
+            team.roster[slotFoundIndex].cost = cost;
+            team.budget -= cost;
+
+            // Track Round Most Expensive
+            if (cost > appState.roundMostExpensive.cost) {
+                appState.roundMostExpensive = {
+                    player: fullPlayerName,
+                    cost: cost,
+                    team: team.name
+                };
+            }
+
+            // Track Overall Most Expensive
+            if (cost > appState.mostExpensive.cost) {
+                appState.mostExpensive = {
+                    player: fullPlayerName,
+                    cost: cost,
+                    team: team.name
+                };
+            }
+
+            document.getElementById('draft-player-name').value = '';
+            document.getElementById('draft-cost').value = '';
+
+            updatePlayerDatalist();
+            completeNominationTurn();
+        }
+
+        function completeNominationTurn() {
+            appState.roundTurnsCompleted++;
+            saveCurrentState();
+
+            if (appState.roundTurnsCompleted >= appState.teams.length) {
+                showEndOfRoundModal();
+            } else {
+                advanceTurn();
+            }
+        }
+
+        function showEndOfRoundModal() {
+            renderDraftBoard(); 
+            document.getElementById('ended-round-number').innerText = appState.currentRound;
+            document.getElementById('ended-round-num-sub').innerText = appState.currentRound;
+
+            // Round duration math
+            const roundSecs = appState.elapsedSeconds - appState.roundStartElapsedSeconds;
+            const mins = Math.floor(roundSecs / 60);
+            const secs = roundSecs % 60;
+            document.getElementById('round-modal-duration').innerText = mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+
+            // Round top pick displaying
+            const roundExp = appState.roundMostExpensive;
+            const roundExpText = roundExp.cost > 0 ? `${roundExp.player} ($${roundExp.cost}) by ${roundExp.team}` : "None ($0)";
+            document.getElementById('round-modal-round-top').innerText = roundExpText;
+
+            // Overall top pick displaying
+            const exp = appState.mostExpensive;
+            const expText = exp.cost > 0 ? `${exp.player} ($${exp.cost}) by ${exp.team}` : "None ($0)";
+            document.getElementById('round-modal-overall-top').innerText = expText;
+
+            document.getElementById('round-modal').style.display = 'flex';
+        }
+
+        function proceedToNextRound() {
+            document.getElementById('round-modal').style.display = 'none';
+            appState.currentRound++;
+            appState.roundTurnsCompleted = 0;
+            appState.roundStartElapsedSeconds = appState.elapsedSeconds; // Reset round timer starting reference
+            appState.roundMostExpensive = { player: "None", cost: 0, team: "" }; // Reset round top pick
+            document.getElementById('round-display').innerText = appState.currentRound;
+            saveCurrentState();
+            advanceTurn();
+        }
+
+        function advanceTurn() {
+            appState.currentNominatorIndex = (appState.currentNominatorIndex + 1) % appState.teams.length;
+            saveCurrentState();
+            renderDraftBoard();
+
+            const nextTeam = appState.teams[appState.currentNominatorIndex];
+            if (nextTeam) {
+                showToast(`Up Next: ${nextTeam.name}'s Turn!`);
+            }
+        }
+
+        // 3. ELAPSED TIME TRACKING
+
+        function startTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                if (appState.timerRunning) {
+                    appState.elapsedSeconds++;
+                    appState.lastUpdatedTime = Date.now();
+                    saveCurrentState();
+                    updateTimerDisplay();
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            const display = document.getElementById('elapsed-time-display');
+            if (!display) return;
+            const hrs = Math.floor(appState.elapsedSeconds / 3600);
+            const mins = Math.floor((appState.elapsedSeconds % 3600) / 60);
+            const secs = appState.elapsedSeconds % 60;
+            display.innerText = `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // 4. SCREEN WAKE LOCK CONTROL (Sleep prevention)
+
+        async function requestWakeLock() {
+            if (!('wakeLock' in navigator)) {
+                const badge = document.getElementById('wake-lock-badge');
+                if (badge) {
+                    badge.innerText = "Wake Lock: Unsupported";
+                    badge.style.borderColor = "var(--danger-color)";
+                    badge.style.color = "var(--danger-color)";
+                }
+                return;
+            }
+            try {
+                wakeLock = await navigator.wakeLock.request('screen');
+                const badge = document.getElementById('wake-lock-badge');
+                if (badge) {
+                    badge.innerText = "Wake Lock: Active";
+                    badge.style.borderColor = "var(--primary-color)";
+                    badge.style.color = "var(--primary-color)";
+                }
+            } catch (err) {
+                console.warn(`${err.name}, ${err.message}`);
+                const badge = document.getElementById('wake-lock-badge');
+                if (badge) {
+                    badge.innerText = "Wake Lock: Inactive";
+                    badge.style.borderColor = "var(--danger-color)";
+                    badge.style.color = "var(--danger-color)";
+                }
+            }
+        }
+
+        document.addEventListener('visibilitychange', async () => {
+            if (wakeLock !== null && document.visibilityState === 'visible') {
+                await requestWakeLock();
+            }
+        });
+
+        // 5. ARCHIVES AND EXPORT MANAGEMENT
+
+        function archiveDraftConfirm() {
+            if (!confirm("Are you sure you want to finalize, archive, and clear this draft? This stores the records into your historical local draft log.")) {
+                return;
+            }
+
+            const archivesStr = localStorage.getItem('ffb_draft_archives');
+            let archives = archivesStr ? JSON.parse(archivesStr) : [];
+
+            archives.push({
+                archiveId: 'archive_' + Date.now(),
+                year: appState.year,
+                savedAt: new Date().toLocaleDateString(),
+                mostExpensive: appState.mostExpensive,
+                startingBudget: appState.startingBudget,
+                teams: appState.teams
+            });
+
+            localStorage.setItem('ffb_draft_archives', JSON.stringify(archives));
+
+            if (timerInterval) clearInterval(timerInterval);
+            localStorage.removeItem('ffb_active_state');
+
+            alert("Draft Saved Successfully! Returning to setup screen.");
+
+            appState = {
+                year: new Date().getFullYear() + 1,
+                startingBudget: 250,
+                rosterSlots: [...DEFAULT_ROSTER_SLOTS],
+                teams: [],
+                currentNominatorIndex: 0,
+                mostExpensive: { player: "None", cost: 0, team: "" },
+                roundMostExpensive: { player: "None", cost: 0, team: "" },
+                currentRound: 1,
+                roundTurnsCompleted: 0,
+                elapsedSeconds: 0,
+                roundStartElapsedSeconds: 0,
+                timerRunning: false,
+                lastUpdatedTime: 0
+            };
+
+            document.getElementById('draft-view').classList.remove('active');
+            document.getElementById('setup-view').classList.add('active');
+
+            // Do not overwrite user names when completing
+            draftOrderAssignments = new Array(setupNumManagers).fill(null);
+            renderSetupManagers();
+            loadArchivesList();
+            updatePlayerDatalist();
+        }
+
+        function loadArchivesList() {
+            const archivesStr = localStorage.getItem('ffb_draft_archives');
+            const container = document.getElementById('archives-list');
+            container.innerHTML = '';
+
+            if (!archivesStr || JSON.parse(archivesStr).length === 0) {
+                container.innerHTML = '<p style="color: var(--text-muted); font-style: italic;">No saved drafts found. Complete a draft to archive it.</p>';
+                return;
+            }
+
+            const archives = JSON.parse(archivesStr);
+            archives.forEach(arch => {
+                const item = document.createElement('div');
+                item.className = 'archive-item';
+                item.innerHTML = `
+                    <div>
+                        <span>${arch.year} Draft Season</span> 
+                        <small style="color: var(--text-muted); margin-left: 10px;">Archived on ${arch.savedAt}</small>
+                        <div style="font-size: 0.8rem; margin-top: 3px; color: var(--primary-color);">
+                            Top Pick Overall: ${arch.mostExpensive.player} ($${arch.mostExpensive.cost})
+                        </div>
+                    </div>
+                    <div class="archive-actions">
+                        <button class="btn-small" onclick="viewArchive('${arch.archiveId}')">View Board</button>
+                        <button class="btn-small" style="border-color: var(--danger-color); color: var(--danger-color);" onclick="deleteArchive('${arch.archiveId}')">Delete</button>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        // View single past draft in full grid modal
+        function viewArchive(archiveId) {
+            const archivesStr = localStorage.getItem('ffb_draft_archives');
+            if (!archivesStr) return;
+
+            const archives = JSON.parse(archivesStr);
+            const target = archives.find(a => a.archiveId === archiveId);
+            if (!target) return;
+
+            document.getElementById('modal-title').innerText = `${target.year} Final Draft Board - Puck Jesus' Blessed Union`;
+
+            const grid = document.getElementById('modal-board-grid');
+            grid.innerHTML = '';
+
+            const colsCount = Math.ceil(target.teams.length / 2);
+            grid.style.gridTemplateColumns = `repeat(${colsCount}, 1fr)`;
+
+            target.teams.forEach(team => {
+                const card = document.createElement('div');
+                card.className = 'team-card';
+
+                let rosterRowsHTML = '';
+                team.roster.forEach(slot => {
+                    if (slot.player) {
+                        rosterRowsHTML += `
+                            <tr>
+                                <td class="pos-col">${slot.position}</td>
+                                <td class="player-col">${slot.player}</td>
+                                <td class="cost-col">$${slot.cost}</td>
+                            </tr>
+                        `;
+                    } else {
+                        rosterRowsHTML += `
+                            <tr>
+                                <td class="pos-col">${slot.position}</td>
+                                <td class="player-col empty-slot">Empty</td>
+                                <td class="cost-col">-</td>
+                            </tr>
+                        `;
+                    }
+                });
+
+                card.innerHTML = `
+                    <div class="team-header">
+                        <div class="team-name">${team.name}</div>
+                    </div>
+                    <div class="team-stats">
+                        <div class="stat-box">
+                            <div class="stat-label">Spent</div>
+                            <div class="stat-value">$${(target.startingBudget || 250) - team.budget}</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Left</div>
+                            <div class="stat-value gold">$${team.budget}</div>
+                        </div>
+                    </div>
+                    <table class="roster-table">
+                        <tbody>${rosterRowsHTML}</tbody>
+                    </table>
+                `;
+                grid.appendChild(card);
+            });
+
+            document.getElementById('archive-modal').style.display = 'flex';
+        }
+
+        function deleteArchive(archiveId) {
+            if (!confirm("Are you sure you want to permanently delete this archive from history?")) {
+                return;
+            }
+            const archivesStr = localStorage.getItem('ffb_draft_archives');
+            if (!archivesStr) return;
+
+            let archives = JSON.parse(archivesStr);
+            archives = archives.filter(a => a.archiveId !== archiveId);
+            localStorage.setItem('ffb_draft_archives', JSON.stringify(archives));
+            loadArchivesList();
+        }
+
+        function closeArchiveModal(event) {
+            document.getElementById('archive-modal').style.display = 'none';
+        }
+
+        // Export State to JSON
+        function downloadDraftBackup() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appState, null, 2));
+            const dlAnchor = document.createElement('a');
+            dlAnchor.setAttribute("href", dataStr);
+            dlAnchor.setAttribute("download", `ffb_draft_backup_${appState.year}.json`);
+            document.body.appendChild(dlAnchor);
+            dlAnchor.click();
+            dlAnchor.remove();
+        }
+    </script>
+</body>
+</html>
