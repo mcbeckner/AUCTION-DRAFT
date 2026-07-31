@@ -558,12 +558,20 @@
             box-shadow: 0 0 16px rgba(204, 160, 40, 0.25);
         }
 
+        .team-card.editing {
+            border-color: var(--danger-color) !important;
+            box-shadow: 0 0 16px rgba(239, 68, 68, 0.3) !important;
+        }
+
         .team-header {
             background-color: rgba(0, 0, 0, 0.35);
             padding: 8px 6px;
             text-align: center;
             border-bottom: 1.5px solid var(--border-color);
             position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .team-card.current-picker .team-header {
@@ -594,6 +602,39 @@
             overflow: hidden;
             text-overflow: ellipsis;
             padding: 0 20px;
+        }
+
+        /* HEADER EDIT BUTTON */
+        .btn-tile-edit {
+            position: absolute;
+            right: 8px;
+            top: 6px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            font-size: 0.65rem;
+            font-weight: 800;
+            padding: 2px 7px;
+            border-radius: 4px;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.2s;
+        }
+
+        .btn-tile-edit:hover {
+            border-color: var(--primary-color);
+            color: var(--primary-color);
+            background: rgba(204, 160, 40, 0.1);
+        }
+
+        .team-card.editing .btn-tile-edit {
+            background: var(--danger-color);
+            color: white;
+            border-color: var(--danger-color);
+        }
+
+        .team-card.editing .btn-tile-edit:hover {
+            background: #f87171;
         }
 
         .team-stats {
@@ -648,6 +689,16 @@
 
         .roster-table tr:last-child td {
             border-bottom: none;
+        }
+
+        /* EDIT ACTIVE STATE FOR ROSTER ROWS */
+        .editing-row {
+            background: rgba(204, 160, 40, 0.05) !important;
+            transition: background 0.2s;
+            cursor: pointer;
+        }
+        .editing-row:hover {
+            background: rgba(204, 160, 40, 0.18) !important;
         }
 
         .pos-col {
@@ -807,6 +858,11 @@
             background: var(--primary-color);
         }
     </style>
+
+    <!-- Firebase App (the core Firebase SDK) - using compat for vanilla JS integration -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+    <!-- Firebase Firestore -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
@@ -935,14 +991,14 @@
             </div>
         </header>
 
-        <!-- INPUT ACTION PANEL - REMOVED POSITION SELECTOR FOR SIMPLIFICATION -->
+        <!-- INPUT ACTION PANEL -->
         <div class="control-panel">
             <strong>Log Bid:</strong>
             <select id="draft-team-select" title="Assign To Team"></select>
 
             <!-- INPUT BINDED TO AUTOCOMPLETE PLAYERS REPOSITORY DATALIST -->
             <input type="text" id="draft-player-name" placeholder="Start typing player name..." list="player-repo-list" autocomplete="off">
-            <input type="number" id="draft-cost" placeholder="$ Cost" min="1" max="1000">
+            <input type="number" id="draft-cost" placeholder="$ Cost" min="1" max="1000" onkeydown="if(event.key === 'Enter') processDraftPick()">
 
             <button class="btn-action" onclick="processDraftPick()">Process Pick</button>
         </div>
@@ -1025,7 +1081,41 @@
         </div>
     </div>
 
+    <!-- EDIT PICK MODAL -->
+    <div id="edit-pick-modal" class="modal" style="z-index: 1003;" onclick="closeEditPickModal(event)">
+        <div class="modal-content" style="max-width: 400px; height: auto; text-align: center; justify-content: center; gap: 15px; margin: auto;" onclick="event.stopPropagation()">
+            <h2 style="color: var(--primary-color); font-size: 1.5rem; text-transform: uppercase;">Edit Drafted Player</h2>
+            <p style="font-size: 0.95rem; color: #fff;">Modify the pick for <strong id="edit-pick-team-name"></strong>:</p>
+            <div style="display: flex; flex-direction: column; gap: 10px; text-align: left;">
+                <label style="font-size: 0.85rem; color: var(--text-muted); font-weight: bold;">Player Name:</label>
+                <input type="text" id="edit-pick-player-name" list="player-repo-list" autocomplete="off" onfocus="this.value=''" style="background: var(--bg-color); border: 1px solid var(--border-color); color: white; padding: 8px; border-radius: 6px;">
+                
+                <label style="font-size: 0.85rem; color: var(--text-muted); font-weight: bold;">Amount Paid ($):</label>
+                <input type="number" id="edit-pick-cost" min="1" max="1000" onfocus="this.value=''" style="background: var(--bg-color); border: 1px solid var(--border-color); color: white; padding: 8px; border-radius: 6px;">
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
+                <button class="btn-action" onclick="saveEditedPick()">Save Changes</button>
+                <button class="btn-danger" style="padding: 8px;" onclick="deleteEditedPick()">Delete Player (Release)</button>
+                <button class="btn-small" style="padding: 8px; border-color: #444;" onclick="closeEditPickModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <script>
+        // Your Firebase config
+        const firebaseConfig = {
+            apiKey: "AIzaSyAcE1SY7XQNpoMTMnGTok8goaQESFmFtZ8",
+            authDomain: "auction-draf.firebaseapp.com",
+            projectId: "auction-draf",
+            storageBucket: "auction-draf.firebasestorage.app",
+            messagingSenderId: "887885434977",
+            appId: "1:887885434977:web:2d5031fce1cf03ad45da20"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
         const DEFAULT_MANAGERS = [
             "A-Dubs", "Kyrie", "Big Slice", "Big Daddy", 
             "Coach", "O'C", "Puck Jesus", "DOC", 
@@ -1152,6 +1242,8 @@
 
         let toastTimeout = null;
         let pendingPick = null; // For holding pick payload when custom player modal triggers
+        let activeEditState = { teamId: null, slotIdx: null }; // Tracks active row being edited
+        let fetchedArchives = []; // Holds archives fetched from Firebase
 
         // Display popup notification for the user's turn
         function showToast(message) {
@@ -1166,8 +1258,7 @@
         }
 
         // Initialize App
-        window.onload = function() {
-            // Ensure autocomplete only filters dynamically when input starts capturing letters
+        window.onload = async function() {
             document.getElementById('draft-player-name').addEventListener('input', function(e) {
                 if (e.target.value.length > 0) {
                     e.target.setAttribute('list', 'player-repo-list');
@@ -1176,30 +1267,39 @@
                 }
             });
 
-            const savedState = localStorage.getItem('ffb_active_state');
-            if (savedState) {
-                appState = JSON.parse(savedState);
-                setupNumManagers = appState.teams.length;
-                document.getElementById('num-managers-display').innerText = setupNumManagers;
+            try {
+                // Fetch from Firebase
+                const docRef = await db.collection("draft").doc("active_state").get();
+                
+                if (docRef.exists) {
+                    appState = docRef.data();
+                    setupNumManagers = appState.teams.length;
+                    document.getElementById('num-managers-display').innerText = setupNumManagers;
 
-                if (!appState.roundStartElapsedSeconds) appState.roundStartElapsedSeconds = 0;
-                if (!appState.roundMostExpensive) appState.roundMostExpensive = { player: "None", cost: 0, team: "" };
-                if (!appState.startingBudget) appState.startingBudget = STARTING_BUDGET;
-                if (!appState.rosterSlots) appState.rosterSlots = [...DEFAULT_ROSTER_SLOTS];
+                    appState.teams.forEach(t => t.isEditing = false);
 
-                if (appState.timerRunning) {
-                    const timePassed = Math.floor((Date.now() - appState.lastUpdatedTime) / 1000);
-                    if (timePassed > 0) appState.elapsedSeconds += timePassed;
-                    startTimer();
+                    if (!appState.roundStartElapsedSeconds) appState.roundStartElapsedSeconds = 0;
+                    if (!appState.roundMostExpensive) appState.roundMostExpensive = { player: "None", cost: 0, team: "" };
+                    if (!appState.startingBudget) appState.startingBudget = STARTING_BUDGET;
+                    if (!appState.rosterSlots) appState.rosterSlots = [...DEFAULT_ROSTER_SLOTS];
+
+                    if (appState.timerRunning) {
+                        const timePassed = Math.floor((Date.now() - appState.lastUpdatedTime) / 1000);
+                        if (timePassed > 0) appState.elapsedSeconds += timePassed;
+                        startTimer();
+                    }
+                    goToDraftView();
+                    requestWakeLock();
+                } else {
+                    renderSetupManagers();
                 }
-                goToDraftView();
-                requestWakeLock();
-                updatePlayerDatalist();
-            } else {
-                renderSetupManagers();
-                loadArchivesList();
-                updatePlayerDatalist();
+            } catch (error) {
+                console.error("Error loading state:", error);
+                renderSetupManagers(); // fallback
             }
+            
+            loadArchivesList();
+            updatePlayerDatalist();
         };
 
         // Dynamic Datatlist Option filtering to exclude already drafted players
@@ -1441,6 +1541,7 @@
                     name: setupManagerNames[managerId],
                     draftOrder: i + 1,
                     budget: startingBudget,
+                    isEditing: false, // Initialize edit tracker flag
                     roster: dynamicRosterSlots.map(pos => ({ position: pos, player: "", cost: 0 }))
                 });
             }
@@ -1472,7 +1573,9 @@
             if (appState.timerRunning) {
                 appState.lastUpdatedTime = Date.now();
             }
-            localStorage.setItem('ffb_active_state', JSON.stringify(appState));
+            // Save to Firebase instead of localStorage
+            db.collection("draft").doc("active_state").set(appState)
+                .catch(error => console.error("Error saving state: ", error));
         }
 
         function goToDraftView() {
@@ -1521,6 +1624,17 @@
             });
         }
 
+        // Toggles a single tile's manual editing interface
+        function toggleTileEdit(teamId, event) {
+            if (event) event.stopPropagation();
+            const team = appState.teams.find(t => t.id === teamId);
+            if (!team) return;
+
+            team.isEditing = !team.isEditing;
+            saveCurrentState();
+            renderDraftBoard();
+        }
+
         function renderDraftBoard() {
             const container = document.getElementById('board-grid');
             container.innerHTML = '';
@@ -1533,18 +1647,32 @@
                 const maxBid = getMaxAllowedBid(team);
 
                 const card = document.createElement('div');
-                card.className = `team-card ${isCurrentPicker ? 'current-picker' : ''}`;
+                card.className = `team-card ${isCurrentPicker ? 'current-picker' : ''} ${team.isEditing ? 'editing' : ''}`;
 
                 let rosterRowsHTML = '';
                 team.roster.forEach((slot, slotIdx) => {
                     if (slot.player) {
-                        rosterRowsHTML += `
-                            <tr style="cursor: pointer;" onclick="releasePlayer(${team.id}, ${slotIdx})" title="Click to Release/Edit Player (Refunds Cash)">
-                                <td class="pos-col">${slot.position}</td>
-                                <td class="player-col" title="${slot.player}">${slot.player}</td>
-                                <td class="cost-col" style="color: var(--danger-color); font-weight: bold;">$${slot.cost}</td>
-                            </tr>
-                        `;
+                        if (team.isEditing) {
+                            // High contrast row highlighting with editing pencil badge
+                            rosterRowsHTML += `
+                                <tr class="editing-row" onclick="openEditPickModal(${team.id}, ${slotIdx})" title="Click to Edit or Release Player">
+                                    <td class="pos-col">${slot.position}</td>
+                                    <td class="player-col" title="${slot.player}">${slot.player}</td>
+                                    <td class="cost-col" style="color: var(--danger-color); font-weight: bold; display: flex; align-items: center; justify-content: flex-end; gap: 4px;">
+                                        <span>$${slot.cost}</span>
+                                        <span style="background: var(--primary-color); color: black; border-radius: 4px; padding: 1px 4px; font-size: 0.65rem; font-weight: 800;">✎</span>
+                                    </td>
+                                </tr>
+                            `;
+                        } else {
+                            rosterRowsHTML += `
+                                <tr>
+                                    <td class="pos-col">${slot.position}</td>
+                                    <td class="player-col" title="${slot.player}">${slot.player}</td>
+                                    <td class="cost-col" style="color: var(--danger-color); font-weight: bold;">$${slot.cost}</td>
+                                </tr>
+                            `;
+                        }
                     } else {
                         rosterRowsHTML += `
                             <tr>
@@ -1560,6 +1688,7 @@
                     <div class="team-header">
                         <div class="team-order-badge">${team.draftOrder}</div>
                         <div class="team-name" title="${team.name}">${team.name}</div>
+                        <button class="btn-tile-edit" onclick="toggleTileEdit(${team.id}, event)">${team.isEditing ? 'Done' : 'Edit'}</button>
                     </div>
                     <div class="team-stats">
                         <div class="stat-box">
@@ -1598,31 +1727,116 @@
             }
         }
 
-        // UNDO / RELEASE function called when user clicks on a drafted player row
-        function releasePlayer(teamId, slotIdx) {
+        // Open edit/undo pick modal interface
+        function openEditPickModal(teamId, slotIdx) {
+            const team = appState.teams.find(t => t.id === teamId);
+            if (!team) return;
+            const slot = team.roster[slotIdx];
+            if (!slot || !slot.player) return;
+
+            activeEditState.teamId = teamId;
+            activeEditState.slotIdx = slotIdx;
+
+            document.getElementById('edit-pick-team-name').innerText = team.name;
+            document.getElementById('edit-pick-player-name').value = slot.player;
+            document.getElementById('edit-pick-cost').value = slot.cost;
+            document.getElementById('edit-pick-modal').style.display = 'flex';
+        }
+
+        function closeEditPickModal(event) {
+            if (event && event.target !== document.getElementById('edit-pick-modal')) return;
+            document.getElementById('edit-pick-modal').style.display = 'none';
+            activeEditState = { teamId: null, slotIdx: null };
+        }
+
+        // Saves modified player pick details and recalculates money
+        function saveEditedPick() {
+            const { teamId, slotIdx } = activeEditState;
             const team = appState.teams.find(t => t.id === teamId);
             if (!team) return;
 
             const slot = team.roster[slotIdx];
-            if (!slot || !slot.player) return;
+            const newPlayerName = document.getElementById('edit-pick-player-name').value.trim();
+            const newCost = parseInt(document.getElementById('edit-pick-cost').value);
 
-            const confirmRelease = confirm(`Do you want to release "${slot.player}" back to the draft pool and refund $${slot.cost} to ${team.name}?`);
-            if (!confirmRelease) return;
+            if (!newPlayerName) {
+                alert("Player name cannot be empty.");
+                return;
+            }
+            if (isNaN(newCost) || newCost < 1) {
+                alert("Please enter a valid cost of at least $1.");
+                return;
+            }
 
-            // Refund budget
-            team.budget += slot.cost;
+            // Temporarily refund the previous cost to check max allowed bid constraints
+            const tempBudget = team.budget + slot.cost;
+            const emptySlotsCount = team.roster.filter(s => s.player === "").length;
 
-            const releasedPlayer = slot.player;
+            if (newCost > (tempBudget - emptySlotsCount)) {
+                alert(`Rejected! Maximum allowed bid for this edit is $${tempBudget - emptySlotsCount} to guarantee $1 for all remaining empty slots.`);
+                return;
+            }
+
+            // Parse the new position if the user selected from the dropdown (contains commas)
+            let newPosition = slot.position; // Fallback to current slot position
+            if (newPlayerName.includes(',')) {
+                newPosition = newPlayerName.split(',')[1].trim();
+            }
+
+            // Temporarily clear the old slot so the auto-slotter can re-evaluate accurately
+            const oldPlayer = slot.player;
+            const oldCost = slot.cost;
             slot.player = "";
             slot.cost = 0;
+            team.budget = tempBudget; // temporarily refund
 
-            // Recalculate top pick metrics across the board
+            // Find the best new roster slot for the updated position
+            const newSlotIdx = findBestRosterSlot(team, newPosition);
+
+            if (newSlotIdx === -1) {
+                // If the roster has no space for this new position, revert the change and alert
+                slot.player = oldPlayer;
+                slot.cost = oldCost;
+                team.budget = tempBudget - oldCost;
+                alert(`Error: No open roster slot (or FLEX/Bench) remains for a ${newPosition}!`);
+                return;
+            }
+
+            // Apply modifications to the correct new slot
+            team.budget -= newCost;
+            team.roster[newSlotIdx].player = newPlayerName;
+            team.roster[newSlotIdx].cost = newCost;
+
+            closeEditPickModal();
             recalculateMostExpensive();
-
             saveCurrentState();
             updatePlayerDatalist();
             renderDraftBoard();
-            showToast(`Released ${releasedPlayer}. $${team.budget} refunded to ${team.name}.`);
+            showToast(`Updated pick: ${newPlayerName} ($${newCost})`);
+        }
+
+        // Deletes/releases the drafted player, reverting the draft slot to Empty
+        function deleteEditedPick() {
+            const { teamId, slotIdx } = activeEditState;
+            const team = appState.teams.find(t => t.id === teamId);
+            if (!team) return;
+
+            const slot = team.roster[slotIdx];
+            if (!slot) return;
+
+            const releasedPlayer = slot.player;
+            
+            // Refund draft budget
+            team.budget += slot.cost;
+            slot.player = "";
+            slot.cost = 0;
+
+            closeEditPickModal();
+            recalculateMostExpensive();
+            saveCurrentState();
+            updatePlayerDatalist();
+            renderDraftBoard();
+            showToast(`Released ${releasedPlayer}. $${team.budget} refunded.`);
         }
 
         // Find the absolute top pick left on the boards
@@ -1641,7 +1855,7 @@
         // Auto-slotting logic based on extracted player position metadata
         function findBestRosterSlot(team, position) {
             let primaryPos = position;
-            if (position === "D/ST") primaryPos = "Def/ST";
+            if (position === "D/ST" || position === "Def/ST") primaryPos = "Def/ST";
 
             // 1. Try to find an empty primary position slot
             for (let i = 0; i < team.roster.length; i++) {
@@ -1897,93 +2111,102 @@
         // 5. ARCHIVES AND EXPORT MANAGEMENT
 
         function archiveDraftConfirm() {
-            if (!confirm("Are you sure you want to finalize, archive, and clear this draft? This stores the records into your historical local draft log.")) {
+            if (!confirm("Are you sure you want to finalize, archive, and clear this draft? This stores the records into your historical cloud log.")) {
                 return;
             }
 
-            const archivesStr = localStorage.getItem('ffb_draft_archives');
-            let archives = archivesStr ? JSON.parse(archivesStr) : [];
-
-            archives.push({
+            const archiveData = {
                 archiveId: 'archive_' + Date.now(),
                 year: appState.year,
                 savedAt: new Date().toLocaleDateString(),
                 mostExpensive: appState.mostExpensive,
                 startingBudget: appState.startingBudget,
                 teams: appState.teams
-            });
-
-            localStorage.setItem('ffb_draft_archives', JSON.stringify(archives));
-
-            if (timerInterval) clearInterval(timerInterval);
-            localStorage.removeItem('ffb_active_state');
-
-            alert("Draft Saved Successfully! Returning to setup screen.");
-
-            appState = {
-                year: new Date().getFullYear() + 1,
-                startingBudget: 250,
-                rosterSlots: [...DEFAULT_ROSTER_SLOTS],
-                teams: [],
-                currentNominatorIndex: 0,
-                mostExpensive: { player: "None", cost: 0, team: "" },
-                roundMostExpensive: { player: "None", cost: 0, team: "" },
-                currentRound: 1,
-                roundTurnsCompleted: 0,
-                elapsedSeconds: 0,
-                roundStartElapsedSeconds: 0,
-                timerRunning: false,
-                lastUpdatedTime: 0
             };
 
-            document.getElementById('draft-view').classList.remove('active');
-            document.getElementById('setup-view').classList.add('active');
+            // Add to Firebase Archives Collection
+            db.collection("archives").doc(archiveData.archiveId).set(archiveData).then(() => {
+                // Now delete the active state from Firebase
+                return db.collection("draft").doc("active_state").delete();
+            }).then(() => {
+                if (timerInterval) clearInterval(timerInterval);
 
-            // Do not overwrite user names when completing
-            draftOrderAssignments = new Array(setupNumManagers).fill(null);
-            renderSetupManagers();
-            loadArchivesList();
-            updatePlayerDatalist();
+                alert("Draft Saved to Cloud Successfully! Returning to setup screen.");
+
+                appState = {
+                    year: new Date().getFullYear() + 1,
+                    startingBudget: 250,
+                    rosterSlots: [...DEFAULT_ROSTER_SLOTS],
+                    teams: [],
+                    currentNominatorIndex: 0,
+                    mostExpensive: { player: "None", cost: 0, team: "" },
+                    roundMostExpensive: { player: "None", cost: 0, team: "" },
+                    currentRound: 1,
+                    roundTurnsCompleted: 0,
+                    elapsedSeconds: 0,
+                    roundStartElapsedSeconds: 0,
+                    timerRunning: false,
+                    lastUpdatedTime: 0
+                };
+
+                document.getElementById('draft-view').classList.remove('active');
+                document.getElementById('setup-view').classList.add('active');
+
+                draftOrderAssignments = new Array(setupNumManagers).fill(null);
+                renderSetupManagers();
+                loadArchivesList();
+                updatePlayerDatalist();
+            }).catch((error) => {
+                console.error("Error archiving draft: ", error);
+                alert("Failed to archive. Check console.");
+            });
         }
 
-        function loadArchivesList() {
-            const archivesStr = localStorage.getItem('ffb_draft_archives');
+        async function loadArchivesList() {
             const container = document.getElementById('archives-list');
-            container.innerHTML = '';
+            container.innerHTML = 'Loading archives...';
 
-            if (!archivesStr || JSON.parse(archivesStr).length === 0) {
-                container.innerHTML = '<p style="color: var(--text-muted); font-style: italic;">No saved drafts found. Complete a draft to archive it.</p>';
-                return;
-            }
+            try {
+                const snapshot = await db.collection("archives").orderBy("archiveId", "desc").get();
+                container.innerHTML = '';
 
-            const archives = JSON.parse(archivesStr);
-            archives.forEach(arch => {
-                const item = document.createElement('div');
-                item.className = 'archive-item';
-                item.innerHTML = `
-                    <div>
-                        <span>${arch.year} Draft Season</span> 
-                        <small style="color: var(--text-muted); margin-left: 10px;">Archived on ${arch.savedAt}</small>
-                        <div style="font-size: 0.8rem; margin-top: 3px; color: var(--primary-color);">
-                            Top Pick Overall: ${arch.mostExpensive.player} ($${arch.mostExpensive.cost})
+                if (snapshot.empty) {
+                    container.innerHTML = '<p style="color: var(--text-muted); font-style: italic;">No saved drafts found in cloud.</p>';
+                    return;
+                }
+
+                fetchedArchives = [];
+
+                snapshot.forEach((doc) => {
+                    const arch = doc.data();
+                    fetchedArchives.push(arch);
+
+                    const item = document.createElement('div');
+                    item.className = 'archive-item';
+                    item.innerHTML = `
+                        <div>
+                            <span>${arch.year} Draft Season</span> 
+                            <small style="color: var(--text-muted); margin-left: 10px;">Archived on ${arch.savedAt}</small>
+                            <div style="font-size: 0.8rem; margin-top: 3px; color: var(--primary-color);">
+                                Top Pick Overall: ${arch.mostExpensive.player} ($${arch.mostExpensive.cost})
+                            </div>
                         </div>
-                    </div>
-                    <div class="archive-actions">
-                        <button class="btn-small" onclick="viewArchive('${arch.archiveId}')">View Board</button>
-                        <button class="btn-small" style="border-color: var(--danger-color); color: var(--danger-color);" onclick="deleteArchive('${arch.archiveId}')">Delete</button>
-                    </div>
-                `;
-                container.appendChild(item);
-            });
+                        <div class="archive-actions">
+                            <button class="btn-small" onclick="viewArchive('${arch.archiveId}')">View Board</button>
+                            <button class="btn-small" style="border-color: var(--danger-color); color: var(--danger-color);" onclick="deleteArchive('${arch.archiveId}')">Delete</button>
+                        </div>
+                    `;
+                    container.appendChild(item);
+                });
+            } catch (error) {
+                console.error("Error loading archives:", error);
+                container.innerHTML = '<p style="color: red;">Error connecting to Firebase.</p>';
+            }
         }
 
         // View single past draft in full grid modal
         function viewArchive(archiveId) {
-            const archivesStr = localStorage.getItem('ffb_draft_archives');
-            if (!archivesStr) return;
-
-            const archives = JSON.parse(archivesStr);
-            const target = archives.find(a => a.archiveId === archiveId);
+            const target = fetchedArchives.find(a => a.archiveId === archiveId);
             if (!target) return;
 
             document.getElementById('modal-title').innerText = `${target.year} Final Draft Board - Puck Jesus' Blessed Union`;
@@ -2047,13 +2270,12 @@
             if (!confirm("Are you sure you want to permanently delete this archive from history?")) {
                 return;
             }
-            const archivesStr = localStorage.getItem('ffb_draft_archives');
-            if (!archivesStr) return;
-
-            let archives = JSON.parse(archivesStr);
-            archives = archives.filter(a => a.archiveId !== archiveId);
-            localStorage.setItem('ffb_draft_archives', JSON.stringify(archives));
-            loadArchivesList();
+            
+            db.collection("archives").doc(archiveId).delete().then(() => {
+                loadArchivesList();
+            }).catch((error) => {
+                console.error("Error deleting archive:", error);
+            });
         }
 
         function closeArchiveModal(event) {
