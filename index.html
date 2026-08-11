@@ -1259,13 +1259,10 @@
 
         // Initialize App
         window.onload = async function() {
-            document.getElementById('draft-player-name').addEventListener('input', function(e) {
-                if (e.target.value.length > 0) {
-                    e.target.setAttribute('list', 'player-repo-list');
-                } else {
-                    e.target.setAttribute('list', '');
-                }
+                        document.getElementById('draft-player-name').addEventListener('input', function(e) {
+                updatePlayerDatalist(e.target.value);
             });
+
 
             try {
                 // Fetch from Firebase
@@ -1303,7 +1300,7 @@
         };
 
         // Dynamic Datatlist Option filtering to exclude already drafted players
-        function updatePlayerDatalist() {
+                function updatePlayerDatalist(searchTerm = "") {
             const playerDatalist = document.getElementById('player-repo-list');
             playerDatalist.innerHTML = '';
 
@@ -1318,6 +1315,29 @@
                     });
                 });
             }
+
+            const searchLower = searchTerm.toLowerCase();
+
+            PLAYER_REPOSITORY.sort().forEach(player => {
+                const playerClean = player.toLowerCase().trim();
+                let isDrafted = false;
+                
+                // Checks for exact matches to filter drafted players out of datalist
+                draftedPlayers.forEach(dp => {
+                    if (playerClean === dp || playerClean.startsWith(dp) || dp.startsWith(playerClean)) {
+                        isDrafted = true;
+                    }
+                });
+
+                // Only add if not drafted AND matches the typed search term
+                if (!isDrafted && playerClean.includes(searchLower)) {
+                    const opt = document.createElement('option');
+                    opt.value = player;
+                    playerDatalist.appendChild(opt);
+                }
+            });
+        }
+
 
             PLAYER_REPOSITORY.sort().forEach(player => {
                 const playerClean = player.toLowerCase().trim();
@@ -1635,12 +1655,103 @@
             renderDraftBoard();
         }
 
-        function renderDraftBoard() {
+                function renderDraftBoard() {
             const container = document.getElementById('board-grid');
-            container.innerHTML = '';
-
             const colsCount = Math.ceil(appState.teams.length / 2);
             container.style.gridTemplateColumns = `repeat(${colsCount}, 1fr)`;
+
+            // Create a DocumentFragment to prevent screen flashing
+            const fragment = document.createDocumentFragment();
+
+            appState.teams.forEach((team, idx) => {
+                const isCurrentPicker = (idx === appState.currentNominatorIndex);
+                const maxBid = getMaxAllowedBid(team);
+
+                const card = document.createElement('div');
+                card.className = `team-card ${isCurrentPicker ? 'current-picker' : ''} ${team.isEditing ? 'editing' : ''}`;
+
+                let rosterRowsHTML = '';
+                team.roster.forEach((slot, slotIdx) => {
+                    if (slot.player) {
+                        if (team.isEditing) {
+                            // High contrast row highlighting with editing pencil badge
+                            rosterRowsHTML += `
+                                <tr class="editing-row" onclick="openEditPickModal(${team.id}, ${slotIdx})" title="Click to Edit or Release Player">
+                                    <td class="pos-col">${slot.position}</td>
+                                    <td class="player-col" title="${slot.player}">${slot.player}</td>
+                                    <td class="cost-col" style="color: var(--danger-color); font-weight: bold; display: flex; align-items: center; justify-content: flex-end; gap: 4px;">
+                                        <span>$${slot.cost}</span>
+                                        <span style="background: var(--primary-color); color: black; border-radius: 4px; padding: 1px 4px; font-size: 0.65rem; font-weight: 800;">✎</span>
+                                    </td>
+                                </tr>
+                            `;
+                        } else {
+                            rosterRowsHTML += `
+                                <tr>
+                                    <td class="pos-col">${slot.position}</td>
+                                    <td class="player-col" title="${slot.player}">${slot.player}</td>
+                                    <td class="cost-col" style="color: var(--danger-color); font-weight: bold;">$${slot.cost}</td>
+                                </tr>
+                            `;
+                        }
+                    } else {
+                        rosterRowsHTML += `
+                            <tr>
+                                <td class="pos-col">${slot.position}</td>
+                                <td class="player-col empty-slot">Empty</td>
+                                <td class="cost-col">-</td>
+                            </tr>
+                        `;
+                    }
+                });
+
+                card.innerHTML = `
+                    <div class="team-header">
+                        <div class="team-order-badge">${team.draftOrder}</div>
+                        <div class="team-name" title="${team.name}">${team.name}</div>
+                        <button class="btn-tile-edit" onclick="toggleTileEdit(${team.id}, event)">${team.isEditing ? 'Done' : 'Edit'}</button>
+                    </div>
+                    <div class="team-stats">
+                        <div class="stat-box">
+                            <div class="stat-label">Left</div>
+                            <div class="stat-value gold">$${team.budget}</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-label">Max Bid</div>
+                            <div class="stat-value">$${maxBid}</div>
+                        </div>
+                    </div>
+                    <table class="roster-table">
+                        <tbody>
+                            ${rosterRowsHTML}
+                        </tbody>
+                    </table>
+                `;
+                fragment.appendChild(card); // Append to memory instead of screen
+            });
+
+            // Replace all content at once to stop flashing
+            container.innerHTML = '';
+            container.appendChild(fragment);
+
+            const currentTeam = appState.teams[appState.currentNominatorIndex];
+            const nextTeam = appState.teams[(appState.currentNominatorIndex + 1) % appState.teams.length];
+
+            document.getElementById('current-drafter').innerText = currentTeam ? currentTeam.name : "N/A";
+            document.getElementById('next-drafter').innerText = nextTeam ? nextTeam.name : "N/A";
+
+            const exp = appState.mostExpensive;
+            if (exp.cost > 0) {
+                document.getElementById('most-expensive-display').innerText = `${exp.player} ($${exp.cost}) - Assigned to ${exp.team}`;
+            } else {
+                document.getElementById('most-expensive-display').innerText = "None ($0)";
+            }
+
+            if (currentTeam) {
+                document.getElementById('draft-team-select').value = currentTeam.id;
+            }
+        }
+
 
             appState.teams.forEach((team, idx) => {
                 const isCurrentPicker = (idx === appState.currentNominatorIndex);
