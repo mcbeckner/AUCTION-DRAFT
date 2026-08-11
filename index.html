@@ -1327,8 +1327,17 @@
                 }
             });
             
-            // Inject all at once to prevent layout thrashing (screen flashing) and datalist disconnections
+                        // Inject all at once to prevent layout thrashing (screen flashing)
             playerDatalist.innerHTML = optionsHTML;
+            
+            // Force the browser to refresh the datalist connection
+            const playerInput = document.getElementById('draft-player-name');
+            playerInput.removeAttribute('list');
+            
+            // Re-trigger the layout so the browser registers the removal before adding it back
+            void playerInput.offsetWidth; 
+            
+            playerInput.setAttribute('list', 'player-repo-list');
         }
 
 
