@@ -1295,7 +1295,10 @@
             updatePlayerDatalist();
         };
 
-                                // Dynamic Datatlist Option filtering to exclude already drafted players
+    // ---- Player autocomplete (replaces the native <datalist> popup) ----
+    let availablePlayerList = [];
+
+    // Dynamic player filtering to exclude already drafted players
     function updatePlayerDatalist() {
         // Get all drafted players across all teams
         const draftedPlayers = new Set();
@@ -1309,42 +1312,141 @@
             });
         }
 
-        let optionsHTML = '';
-        PLAYER_REPOSITORY.sort().forEach(player => {
+        availablePlayerList = PLAYER_REPOSITORY.slice().sort().filter(player => {
             const playerClean = player.toLowerCase().trim();
             let isDrafted = false;
-            // Checks for exact matches to filter drafted players out of datalist
+            // Checks for exact matches to filter drafted players out of the list
             draftedPlayers.forEach(dp => {
                 if (playerClean === dp || playerClean.startsWith(dp) || dp.startsWith(playerClean)) {
                     isDrafted = true;
                 }
             });
-
-            if (!isDrafted) {
-                optionsHTML += `<option value="${player}"></option>`;
-            }
+            return !isDrafted;
         });
-        
-        const playerDatalist = document.getElementById('player-repo-list');
-        const playerInput = document.getElementById('draft-player-name');
-        
-        if (playerDatalist && playerInput) {
-            // Update the datalist options
-            playerDatalist.innerHTML = optionsHTML;
-            
-            // THE FIX: Automate the "click out and click back in" workaround
-            // This forces the browser's native autocomplete UI to reset and reconnect
-            playerInput.blur();
-            
-            // A tiny delay ensures the browser fully registers the blur before focusing again
-            setTimeout(() => {
-                playerInput.focus();
-            }, 10);
-        }
+
+        initPlayerAutocomplete();
     }
 
+    function initPlayerAutocomplete() {
+        const input = document.getElementById('draft-player-name');
+        if (!input || input.dataset.acReady === 'true') return;
+        input.dataset.acReady = 'true';
 
+        // Disconnect the native datalist popup (this is the part that goes stale)
+        input.removeAttribute('list');
+        input.setAttribute('autocomplete', 'off');
 
+        let box = document.getElementById('player-ac-box');
+        if (!box) {
+            box = document.createElement('div');
+            box.id = 'player-ac-box';
+            box.style.cssText = 'position:fixed; z-index:99999; display:none; max-height:240px; ' +
+                'overflow-y:auto; background:#fff; color:#111; border:1px solid #ccc; ' +
+                'border-radius:6px; box-shadow:0 6px 18px rgba(0,0,0,.25); font-size:14px;';
+            document.body.appendChild(box);
+        }
+
+        let matches = [];
+        let activeIndex = -1;
+
+        function positionBox() {
+            const r = input.getBoundingClientRect();
+            box.style.left = r.left + 'px';
+            box.style.top = (r.bottom + 2) + 'px';
+            box.style.width = r.width + 'px';
+        }
+
+        function hideBox() {
+            box.style.display = 'none';
+            matches = [];
+            activeIndex = -1;
+        }
+
+        function paint() {
+            box.innerHTML = '';
+            matches.forEach((name, i) => {
+                const row = document.createElement('div');
+                row.textContent = name;
+                row.style.cssText = 'padding:7px 10px; cursor:pointer; white-space:nowrap; ' +
+                    'overflow:hidden; text-overflow:ellipsis;' +
+                    (i === activeIndex ? 'background:#2563eb; color:#fff;' : '');
+                // mousedown fires before blur, so the click always registers
+                row.addEventListener('mousedown', function (e) {
+                    e.preventDefault();
+                    choose(i);
+                });
+                row.addEventListener('mouseenter', function () {
+                    activeIndex = i;
+                    paint();
+                });
+                box.appendChild(row);
+            });
+            positionBox();
+            box.style.display = matches.length ? 'block' : 'none';
+        }
+
+        function choose(i) {
+            if (i < 0 || i >= matches.length) return;
+            input.value = matches[i];
+            hideBox();
+            // Let any existing listeners know the value changed
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+            input.focus();
+        }
+
+        function search() {
+            const q = input.value.toLowerCase().trim();
+            if (!q) { hideBox(); return; }
+            // Names starting with what you typed come first, then any other match
+            const starts = [];
+            const contains = [];
+            for (let n = 0; n < availablePlayerList.length; n++) {
+                const name = availablePlayerList[n];
+                const low = name.toLowerCase();
+                if (low.startsWith(q)) starts.push(name);
+                else if (low.indexOf(q) !== -1) contains.push(name);
+                if (starts.length + contains.length >= 60) break;
+            }
+            matches = starts.concat(contains).slice(0, 12);
+            activeIndex = matches.length ? 0 : -1;
+            paint();
+        }
+
+        input.addEventListener('input', search);
+        input.addEventListener('focus', search);
+
+        input.addEventListener('keydown', function (e) {
+            if (box.style.display === 'none') return;
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                activeIndex = (activeIndex + 1) % matches.length;
+                paint();
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                activeIndex = (activeIndex - 1 + matches.length) % matches.length;
+                paint();
+            } else if (e.key === 'Enter' || e.key === 'Tab') {
+                if (activeIndex > -1) {
+                    e.preventDefault();
+                    choose(activeIndex);
+                }
+            } else if (e.key === 'Escape') {
+                hideBox();
+            }
+        });
+
+        input.addEventListener('blur', function () {
+            setTimeout(hideBox, 120);
+        });
+
+        window.addEventListener('scroll', function () {
+            if (box.style.display !== 'none') positionBox();
+        }, true);
+        window.addEventListener('resize', function () {
+            if (box.style.display !== 'none') positionBox();
+        });
+    }
 
 
 
