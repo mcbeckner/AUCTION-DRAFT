@@ -1295,7 +1295,7 @@
             updatePlayerDatalist();
         };
 
-                        // Dynamic Datatlist Option filtering to exclude already drafted players
+                            // Dynamic Datatlist Option filtering to exclude already drafted players
     function updatePlayerDatalist() {
         // Get all drafted players across all teams
         const draftedPlayers = new Set();
@@ -1325,22 +1325,27 @@
             }
         });
         
-        // Update the datalist options
-        const playerDatalist = document.getElementById('player-repo-list');
-        if (playerDatalist) {
-            playerDatalist.innerHTML = optionsHTML;
-        }
-
-        // THE FIX: Simulate the user clicking out and clicking back in
+        // THE FIX: Give the connection a brand new random ID every time
         const playerInput = document.getElementById('draft-player-name');
         if (playerInput) {
-            playerInput.blur(); // Remove focus (like clicking out)
+            // Find the datalist using whatever ID it currently has
+            const currentListId = playerInput.getAttribute('list') || 'player-repo-list';
+            const playerDatalist = document.getElementById(currentListId);
             
-            setTimeout(() => {
-                playerInput.focus(); // Restore focus (like clicking back in)
-            }, 50); // A tiny 50ms delay gives the browser enough time to reset the connection
+            if (playerDatalist) {
+                // Update the options
+                playerDatalist.innerHTML = optionsHTML;
+                
+                // Generate a unique ID using the current timestamp
+                const uniqueId = 'player-list-' + Date.now();
+                
+                // Assign the new ID to both the datalist and the input field
+                playerDatalist.id = uniqueId;
+                playerInput.setAttribute('list', uniqueId);
+            }
         }
     }
+
 
 
 
