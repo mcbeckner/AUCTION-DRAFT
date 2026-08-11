@@ -1295,7 +1295,7 @@
             updatePlayerDatalist();
         };
 
-                            // Dynamic Datatlist Option filtering to exclude already drafted players
+                                // Dynamic Datatlist Option filtering to exclude already drafted players
     function updatePlayerDatalist() {
         // Get all drafted players across all teams
         const draftedPlayers = new Set();
@@ -1325,26 +1325,24 @@
             }
         });
         
-        // THE FIX: Give the connection a brand new random ID every time
+        const playerDatalist = document.getElementById('player-repo-list');
         const playerInput = document.getElementById('draft-player-name');
-        if (playerInput) {
-            // Find the datalist using whatever ID it currently has
-            const currentListId = playerInput.getAttribute('list') || 'player-repo-list';
-            const playerDatalist = document.getElementById(currentListId);
+        
+        if (playerDatalist && playerInput) {
+            // Update the datalist options
+            playerDatalist.innerHTML = optionsHTML;
             
-            if (playerDatalist) {
-                // Update the options
-                playerDatalist.innerHTML = optionsHTML;
-                
-                // Generate a unique ID using the current timestamp
-                const uniqueId = 'player-list-' + Date.now();
-                
-                // Assign the new ID to both the datalist and the input field
-                playerDatalist.id = uniqueId;
-                playerInput.setAttribute('list', uniqueId);
-            }
+            // THE FIX: Automate the "click out and click back in" workaround
+            // This forces the browser's native autocomplete UI to reset and reconnect
+            playerInput.blur();
+            
+            // A tiny delay ensures the browser fully registers the blur before focusing again
+            setTimeout(() => {
+                playerInput.focus();
+            }, 10);
         }
     }
+
 
 
 
