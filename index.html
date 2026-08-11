@@ -1327,18 +1327,19 @@
                 }
             });
             
-                        // Inject all at once to prevent layout thrashing (screen flashing)
-            playerDatalist.innerHTML = optionsHTML;
+                                    // Clone the datalist (without its children) to create a fresh element
+            const newDatalist = playerDatalist.cloneNode(false);
             
-            // Force the browser to refresh the datalist connection
-            const playerInput = document.getElementById('draft-player-name');
-            playerInput.removeAttribute('list');
+            // Inject the options into the new, disconnected datalist
+            newDatalist.innerHTML = optionsHTML;
             
-            // Re-trigger the layout so the browser registers the removal before adding it back
-            void playerInput.offsetWidth; 
+            // Completely replace the old datalist in the DOM with the new one
+            playerDatalist.parentNode.replaceChild(newDatalist, playerDatalist);
             
-            playerInput.setAttribute('list', 'player-repo-list');
+            // Update our reference in case this function runs again
+            playerDatalist = newDatalist;
         }
+
 
 
         // 1. SETUP PAGE LOGIC
