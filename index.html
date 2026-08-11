@@ -1295,52 +1295,48 @@
             updatePlayerDatalist();
         };
 
-                // Dynamic Datatlist Option filtering to exclude already drafted players
-                // Dynamic Datatlist Option filtering to exclude already drafted players
-        function updatePlayerDatalist() {
-            // Get all drafted players across all teams
-            const draftedPlayers = new Set();
-            if (appState && appState.teams) {
-                appState.teams.forEach(team => {
-                    team.roster.forEach(slot => {
-                        if (slot.player) {
-                            draftedPlayers.add(slot.player.toLowerCase().trim());
-                        }
-                    });
-                });
-            }
-
-            let optionsHTML = '';
-            PLAYER_REPOSITORY.sort().forEach(player => {
-                const playerClean = player.toLowerCase().trim();
-                let isDrafted = false;
-                // Checks for exact matches to filter drafted players out of datalist
-                draftedPlayers.forEach(dp => {
-                    if (playerClean === dp || playerClean.startsWith(dp) || dp.startsWith(playerClean)) {
-                        isDrafted = true;
+                    // Dynamic Datatlist Option filtering to exclude already drafted players
+    function updatePlayerDatalist() {
+        // Get all drafted players across all teams
+        const draftedPlayers = new Set();
+        if (appState && appState.teams) {
+            appState.teams.forEach(team => {
+                team.roster.forEach(slot => {
+                    if (slot.player) {
+                        draftedPlayers.add(slot.player.toLowerCase().trim());
                     }
                 });
+            });
+        }
 
-                if (!isDrafted) {
-                    optionsHTML += `<option value="${player}"></option>`;
+        let optionsHTML = '';
+        PLAYER_REPOSITORY.sort().forEach(player => {
+            const playerClean = player.toLowerCase().trim();
+            let isDrafted = false;
+            // Checks for exact matches to filter drafted players out of datalist
+            draftedPlayers.forEach(dp => {
+                if (playerClean === dp || playerClean.startsWith(dp) || dp.startsWith(playerClean)) {
+                    isDrafted = true;
                 }
             });
-            
-            // Standard safe injection
-            const playerDatalist = document.getElementById('player-repo-list');
-            if (playerDatalist) {
-                playerDatalist.innerHTML = optionsHTML;
+
+            if (!isDrafted) {
+                optionsHTML += `<option value="${player}"></option>`;
             }
+        });
+        
+        // THE FIX: Completely replace the datalist element in the DOM
+        const oldDatalist = document.getElementById('player-repo-list');
+        if (oldDatalist) {
+            const newDatalist = document.createElement('datalist');
+            newDatalist.id = 'player-repo-list';
+            newDatalist.innerHTML = optionsHTML;
             
-            // Fix Chrome disconnection bug by toggling the list attribute with a tiny delay
-            const playerInput = document.getElementById('draft-player-name');
-            if (playerInput) {
-                playerInput.setAttribute('list', ''); 
-                setTimeout(() => {
-                    playerInput.setAttribute('list', 'player-repo-list');
-                }, 10);
-            }
+            // Swap out the old corrupted datalist with the fresh one
+            oldDatalist.parentNode.replaceChild(newDatalist, oldDatalist);
         }
+    }
+
 
 
         // 1. SETUP PAGE LOGIC
