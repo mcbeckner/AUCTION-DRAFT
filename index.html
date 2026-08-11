@@ -1085,13 +1085,16 @@
     <div id="edit-pick-modal" class="modal" style="z-index: 1003;" onclick="closeEditPickModal(event)">
         <div class="modal-content" style="max-width: 400px; height: auto; text-align: center; justify-content: center; gap: 15px; margin: auto;" onclick="event.stopPropagation()">
             <h2 style="color: var(--primary-color); font-size: 1.5rem; text-transform: uppercase;">Edit Drafted Player</h2>
-            <p style="font-size: 0.95rem; color: #fff;">Modify the pick for <strong id="edit-pick-team-name"></strong>:</p>
+            <div style="display: flex; flex-direction: column; gap: 10px; text-align: left; margin-bottom: 10px;">
+    <label style="font-size: 0.85rem; color: var(--text-muted); font-weight: bold;">Manager/Team:</label>
+    <select id="edit-pick-team-select" style="background: var(--bg-color); border: 1px solid var(--border-color); color: white; padding: 8px; border-radius: 6px;"></select>
+</div>
             <div style="display: flex; flex-direction: column; gap: 10px; text-align: left;">
                 <label style="font-size: 0.85rem; color: var(--text-muted); font-weight: bold;">Player Name:</label>
-                <input type="text" id="edit-pick-player-name" list="player-repo-list" autocomplete="off" onfocus="this.value=''" style="background: var(--bg-color); border: 1px solid var(--border-color); color: white; padding: 8px; border-radius: 6px;">
+                <input type="text" id="edit-pick-player-name" autocomplete="off" style="background: var(--bg-color); border: 1px solid var(--border-color); color: white; padding: 8px; border-radius: 6px;">
                 
-                <label style="font-size: 0.85rem; color: var(--text-muted); font-weight: bold;">Amount Paid ($):</label>
-                <input type="number" id="edit-pick-cost" min="1" max="1000" onfocus="this.value=''" style="background: var(--bg-color); border: 1px solid var(--border-color); color: white; padding: 8px; border-radius: 6px;">
+<label style="font-size: 0.85rem; color: var(--text-muted); font-weight: bold;">Amount Paid ($):</label>
+<input type="number" id="edit-pick-cost" min="1" max="1000" style="background: var(--bg-color); border: 1px solid var(--border-color); color: white; padding: 8px; border-radius: 6px;">
             </div>
             <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;">
                 <button class="btn-action" onclick="saveEditedPick()">Save Changes</button>
@@ -1324,22 +1327,23 @@
             return !isDrafted;
         });
 
-        initPlayerAutocomplete();
+        initPlayerAutocomplete('draft-player-name');
+        initPlayerAutocomplete('edit-pick-player-name');
     }
 
-    function initPlayerAutocomplete() {
-        const input = document.getElementById('draft-player-name');
+    function initPlayerAutocomplete(inputId) {
+        const input = document.getElementById(inputId);
         if (!input || input.dataset.acReady === 'true') return;
         input.dataset.acReady = 'true';
 
-        // Disconnect the native datalist popup (this is the part that goes stale)
         input.removeAttribute('list');
         input.setAttribute('autocomplete', 'off');
 
-        let box = document.getElementById('player-ac-box');
+        const boxId = inputId + '-ac-box';
+        let box = document.getElementById(boxId);
         if (!box) {
             box = document.createElement('div');
-            box.id = 'player-ac-box';
+            box.id = boxId;
             box.style.cssText = 'position:fixed; z-index:99999; display:none; max-height:240px; ' +
                 'overflow-y:auto; background:#fff; color:#111; border:1px solid #ccc; ' +
                 'border-radius:6px; box-shadow:0 6px 18px rgba(0,0,0,.25); font-size:14px;';
@@ -1369,12 +1373,14 @@
                 row.textContent = name;
                 row.style.cssText = 'padding:7px 10px; cursor:pointer; white-space:nowrap; ' +
                     'overflow:hidden; text-overflow:ellipsis;' +
-                    (i === activeIndex ? 'background:#2563eb; color:#fff;' : '');
-                // mousedown fires before blur, so the click always registers
-                row.addEventListener('mousedown', function (e) {
-                    e.preventDefault();
+                    (i === activeIndex ? 'background:#cca028; color:#000; font-weight:bold;' : '');
+                
+                // pointerdown ensures clicks register before input blur fires
+                row.addEventListener('pointerdown', function (e) {
+                    e.preventDefault(); 
                     choose(i);
                 });
+                
                 row.addEventListener('mouseenter', function () {
                     activeIndex = i;
                     paint();
@@ -1389,16 +1395,30 @@
             if (i < 0 || i >= matches.length) return;
             input.value = matches[i];
             hideBox();
-            // Let any existing listeners know the value changed
+            
             input.dispatchEvent(new Event('input', { bubbles: true }));
             input.dispatchEvent(new Event('change', { bubbles: true }));
-            input.focus();
+            
+            // Automatically jump focus to the matching Cost input field
+            const costInputId = input.id === 'draft-player-name' ? 'draft-cost' : 'edit-pick-cost';
+            const costInput = document.getElementById(costInputId);
+            if (costInput) {
+                costInput.focus();
+            } else {
+                input.focus();
+            }
         }
 
         function search() {
             const q = input.value.toLowerCase().trim();
             if (!q) { hideBox(); return; }
-            // Names starting with what you typed come first, then any other match
+
+            // Hide box if exactly matched
+            if (availablePlayerList.map(p => p.toLowerCase()).includes(q)) {
+                hideBox();
+                return;
+            }
+
             const starts = [];
             const contains = [];
             for (let n = 0; n < availablePlayerList.length; n++) {
@@ -1430,6 +1450,10 @@
                 if (activeIndex > -1) {
                     e.preventDefault();
                     choose(activeIndex);
+                } else if (e.key === 'Tab' && matches.length === 1) {
+                    // Auto-fill if exactly 1 match left and user hits Tab
+                    e.preventDefault();
+                    choose(0);
                 }
             } else if (e.key === 'Escape') {
                 hideBox();
@@ -1437,7 +1461,8 @@
         });
 
         input.addEventListener('blur', function () {
-            setTimeout(hideBox, 120);
+            // Increased timeout so quick touches/clicks can register reliably
+            setTimeout(hideBox, 250);
         });
 
         window.addEventListener('scroll', function () {
@@ -1447,6 +1472,8 @@
             if (box.style.display !== 'none') positionBox();
         });
     }
+
+
 
 
 
@@ -1748,7 +1775,7 @@
             renderDraftBoard();
         }
 
-                function renderDraftBoard() {
+        function renderDraftBoard() {
             const container = document.getElementById('board-grid');
             const fragment = document.createDocumentFragment();
 
@@ -1788,13 +1815,25 @@
                             `;
                         }
                     } else {
-                        rosterRowsHTML += `
-                            <tr>
-                                <td class="pos-col">${slot.position}</td>
-                                <td class="player-col empty-slot">Empty</td>
-                                <td class="cost-col">-</td>
-                            </tr>
-                        `;
+                        if (team.isEditing) {
+                            rosterRowsHTML += `
+                                <tr class="editing-row" onclick="openEditPickModal(${team.id}, ${slotIdx})" title="Click to Add Player Manually">
+                                    <td class="pos-col">${slot.position}</td>
+                                    <td class="player-col empty-slot" style="color: #bbb;">Empty (Click to Fill)</td>
+                                    <td class="cost-col" style="color: var(--primary-color); font-weight: 800; display: flex; align-items: center; justify-content: flex-end; gap: 4px;">
+                                        <span style="background: var(--primary-color); color: black; border-radius: 4px; padding: 1px 4px; font-size: 0.65rem; font-weight: 800;">+</span>
+                                    </td>
+                                </tr>
+                            `;
+                        } else {
+                            rosterRowsHTML += `
+                                <tr>
+                                    <td class="pos-col">${slot.position}</td>
+                                    <td class="player-col empty-slot">Empty</td>
+                                    <td class="cost-col">-</td>
+                                </tr>
+                            `;
+                        }
                     }
                 });
 
@@ -1814,7 +1853,7 @@
                             <div class="stat-value">$${maxBid}</div>
                         </div>
                     </div>
-                                        <table class="roster-table">
+                    <table class="roster-table">
                         <tbody>
                             ${rosterRowsHTML}
                         </tbody>
@@ -1827,7 +1866,6 @@
             container.appendChild(fragment);
 
             const currentTeam = appState.teams[appState.currentNominatorIndex];
-
             const nextTeam = appState.teams[(appState.currentNominatorIndex + 1) % appState.teams.length];
 
             document.getElementById('current-drafter').innerText = currentTeam ? currentTeam.name : "N/A";
@@ -1845,35 +1883,42 @@
             }
         }
 
-        // Open edit/undo pick modal interface
-        function openEditPickModal(teamId, slotIdx) {
+
+function openEditPickModal(teamId, slotIdx) {
             const team = appState.teams.find(t => t.id === teamId);
             if (!team) return;
             const slot = team.roster[slotIdx];
-            if (!slot || !slot.player) return;
+            if (!slot) return;
 
             activeEditState.teamId = teamId;
             activeEditState.slotIdx = slotIdx;
 
-            document.getElementById('edit-pick-team-name').innerText = team.name;
-            document.getElementById('edit-pick-player-name').value = slot.player;
-            document.getElementById('edit-pick-cost').value = slot.cost;
+            // Populate manager dropdown
+            const teamSelect = document.getElementById('edit-pick-team-select');
+            teamSelect.innerHTML = '';
+            appState.teams.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.id;
+                opt.innerText = t.name;
+                teamSelect.appendChild(opt);
+            });
+            teamSelect.value = teamId; // Set to current manager
+
+            document.getElementById('edit-pick-player-name').value = slot.player || '';
+            document.getElementById('edit-pick-cost').value = slot.cost || '';
             document.getElementById('edit-pick-modal').style.display = 'flex';
         }
 
-        function closeEditPickModal(event) {
-            if (event && event.target !== document.getElementById('edit-pick-modal')) return;
-            document.getElementById('edit-pick-modal').style.display = 'none';
-            activeEditState = { teamId: null, slotIdx: null };
-        }
-
-        // Saves modified player pick details and recalculates money
         function saveEditedPick() {
             const { teamId, slotIdx } = activeEditState;
-            const team = appState.teams.find(t => t.id === teamId);
-            if (!team) return;
+            const oldTeam = appState.teams.find(t => t.id === teamId);
+            if (!oldTeam) return;
+            const oldSlot = oldTeam.roster[slotIdx];
+            
+            const newTeamId = parseInt(document.getElementById('edit-pick-team-select').value);
+            const newTeam = appState.teams.find(t => t.id === newTeamId);
+            if (!newTeam) return;
 
-            const slot = team.roster[slotIdx];
             const newPlayerName = document.getElementById('edit-pick-player-name').value.trim();
             const newCost = parseInt(document.getElementById('edit-pick-cost').value);
 
@@ -1886,54 +1931,61 @@
                 return;
             }
 
-            // Temporarily refund the previous cost to check max allowed bid constraints
-            const tempBudget = team.budget + slot.cost;
-            const emptySlotsCount = team.roster.filter(s => s.player === "").length;
+            // Save old state in case we need to revert
+            const oldPlayer = oldSlot.player;
+            const oldCost = oldSlot.cost || 0;
 
-            if (newCost > (tempBudget - emptySlotsCount)) {
-                alert(`Rejected! Maximum allowed bid for this edit is $${tempBudget - emptySlotsCount} to guarantee $1 for all remaining empty slots.`);
+            // Temporarily clear old slot and refund old team to check raw capacities
+            oldSlot.player = "";
+            oldSlot.cost = 0;
+            oldTeam.budget += oldCost;
+
+            // Check constraints for the target team
+            const emptySlotsCount = newTeam.roster.filter(s => s.player === "").length;
+            const maxAllowedBid = newTeam.budget - (emptySlotsCount > 0 ? emptySlotsCount - 1 : 0);
+
+            if (newCost > maxAllowedBid) {
+                alert(`Rejected! ${newTeam.name} maximum allowed bid is $${maxAllowedBid} to guarantee $1 for all remaining empty slots.`);
+                // Revert
+                oldSlot.player = oldPlayer;
+                oldSlot.cost = oldCost;
+                oldTeam.budget -= oldCost;
                 return;
             }
 
-            // Parse the new position if the user selected from the dropdown (contains commas)
-            let newPosition = slot.position; // Fallback to current slot position
+            // Identify required roster position
+            let newPosition = "RB"; // Default fallback
+            if (oldSlot.position !== "FLEX" && oldSlot.position !== "Bench") {
+                 newPosition = oldSlot.position;
+            }
             if (newPlayerName.includes(',')) {
-                newPosition = newPlayerName.split(',')[1].trim();
+                newPosition = newPlayerName.split(',')[1].trim(); // Extract exact POS if available
             }
 
-            // Temporarily clear the old slot so the auto-slotter can re-evaluate accurately
-            const oldPlayer = slot.player;
-            const oldCost = slot.cost;
-            slot.player = "";
-            slot.cost = 0;
-            team.budget = tempBudget; // temporarily refund
-
-            // Find the best new roster slot for the updated position
-            const newSlotIdx = findBestRosterSlot(team, newPosition);
-
+            // Find valid slot on new team
+            const newSlotIdx = findBestRosterSlot(newTeam, newPosition);
             if (newSlotIdx === -1) {
-                // If the roster has no space for this new position, revert the change and alert
-                slot.player = oldPlayer;
-                slot.cost = oldCost;
-                team.budget = tempBudget - oldCost;
-                alert(`Error: No open roster slot (or FLEX/Bench) remains for a ${newPosition}!`);
+                alert(`Error: No open roster slot (or FLEX/Bench) remains for a ${newPosition} on ${newTeam.name}!`);
+                // Revert
+                oldSlot.player = oldPlayer;
+                oldSlot.cost = oldCost;
+                oldTeam.budget -= oldCost;
                 return;
             }
 
-            // Apply modifications to the correct new slot
-            team.budget -= newCost;
-            team.roster[newSlotIdx].player = newPlayerName;
-            team.roster[newSlotIdx].cost = newCost;
+            // Apply modifications to new team
+            newTeam.budget -= newCost;
+            newTeam.roster[newSlotIdx].player = newPlayerName;
+            newTeam.roster[newSlotIdx].cost = newCost;
 
             closeEditPickModal();
             recalculateMostExpensive();
             saveCurrentState();
             updatePlayerDatalist();
             renderDraftBoard();
-            showToast(`Updated pick: ${newPlayerName} ($${newCost})`);
+            showToast(`Updated pick: ${newPlayerName} ($${newCost}) -> ${newTeam.name}`);
         }
 
-        // Deletes/releases the drafted player, reverting the draft slot to Empty
         function deleteEditedPick() {
             const { teamId, slotIdx } = activeEditState;
             const team = appState.teams.find(t => t.id === teamId);
@@ -1941,11 +1993,15 @@
 
             const slot = team.roster[slotIdx];
             if (!slot) return;
+            
+            if (!slot.player) {
+                // If the slot was already empty, just close modal
+                closeEditPickModal();
+                return;
+            }
 
             const releasedPlayer = slot.player;
-            
-            // Refund draft budget
-            team.budget += slot.cost;
+            team.budget += slot.cost; // Refund
             slot.player = "";
             slot.cost = 0;
 
@@ -1956,6 +2012,13 @@
             renderDraftBoard();
             showToast(`Released ${releasedPlayer}. $${team.budget} refunded.`);
         }
+
+        // ---> NEW FUNCTION TO PASTE HERE <---
+        function closeEditPickModal() {
+            document.getElementById('edit-pick-modal').style.display = 'none';
+            activeEditState = { teamId: null, slotIdx: null };
+        }
+        // ---> END OF NEW FUNCTION <---
 
         // Find the absolute top pick left on the boards
         function recalculateMostExpensive() {
