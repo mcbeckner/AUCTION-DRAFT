@@ -1297,8 +1297,6 @@
 
                 // Dynamic Datatlist Option filtering to exclude already drafted players
         function updatePlayerDatalist() {
-            const playerDatalist = document.getElementById('player-repo-list');
-
             // Get all drafted players across all teams
             const draftedPlayers = new Set();
             if (appState && appState.teams) {
@@ -1327,17 +1325,23 @@
                 }
             });
             
-                                    // Clone the datalist (without its children) to create a fresh element
-            const newDatalist = playerDatalist.cloneNode(false);
+            // Get the old datalist and the input field
+            const oldDatalist = document.getElementById('player-repo-list');
+            const playerInput = document.getElementById('draft-player-name');
             
-            // Inject the options into the new, disconnected datalist
+            // Clone the datalist to create a fresh element with the exact same ID
+            const newDatalist = oldDatalist.cloneNode(false);
             newDatalist.innerHTML = optionsHTML;
             
-            // Completely replace the old datalist in the DOM with the new one
-            playerDatalist.parentNode.replaceChild(newDatalist, playerDatalist);
+            // Completely replace the old datalist in the DOM
+            oldDatalist.parentNode.replaceChild(newDatalist, oldDatalist);
             
-            // Update our reference in case this function runs again
-            playerDatalist = newDatalist;
+            // Force the input field to recognize the brand new datalist
+            if (playerInput) {
+                playerInput.removeAttribute('list');
+                void playerInput.offsetWidth; // Force browser to register the removal
+                playerInput.setAttribute('list', 'player-repo-list');
+            }
         }
 
 
