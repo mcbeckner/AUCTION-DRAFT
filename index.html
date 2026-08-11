@@ -1295,10 +1295,9 @@
             updatePlayerDatalist();
         };
 
-        // Dynamic Datatlist Option filtering to exclude already drafted players
+                // Dynamic Datatlist Option filtering to exclude already drafted players
         function updatePlayerDatalist() {
             const playerDatalist = document.getElementById('player-repo-list');
-            playerDatalist.innerHTML = '';
 
             // Get all drafted players across all teams
             const draftedPlayers = new Set();
@@ -1312,6 +1311,7 @@
                 });
             }
 
+            let optionsHTML = '';
             PLAYER_REPOSITORY.sort().forEach(player => {
                 const playerClean = player.toLowerCase().trim();
                 let isDrafted = false;
@@ -1323,12 +1323,14 @@
                 });
 
                 if (!isDrafted) {
-                    const opt = document.createElement('option');
-                    opt.value = player;
-                    playerDatalist.appendChild(opt);
+                    optionsHTML += `<option value="${player}"></option>`;
                 }
             });
+            
+            // Inject all at once to prevent layout thrashing (screen flashing) and datalist disconnections
+            playerDatalist.innerHTML = optionsHTML;
         }
+
 
         // 1. SETUP PAGE LOGIC
 
